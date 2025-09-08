@@ -30,6 +30,7 @@ class Trainer:
         self.data_loader_test = self.data_manager.data_loader_test
         self.num_classes = self.data_manager.num_classes
         self.num_source_domains = self.data_manager.num_source_domains
+        self.len_query = self.data_manager.len_query
         
         # ReID doesn't have label name mapping
         # self.class_label_name_mapping = self.data_manager.class_label_name_mapping
@@ -43,7 +44,7 @@ class Trainer:
 
         # Build Evaluator
         self.evaluator = build_evaluator(
-            cfg, class_label_name_mapping=self.class_label_name_mapping
+            cfg, self.len_query
         )
 
     def build_model(self):
@@ -187,10 +188,18 @@ class Trainer:
 
         print("Evaluate on the {} Set".format(split))
 
+        feats = []
+        aid = []
+
         for _, batch_data in enumerate(tqdm(data_loader)):
-            input_data, class_label = self.parse_batch_test(batch_data)
+            input_data, target, domain = self.parse_batch_test(batch_data)
             output = self.model_inference(input_data)
-            self.evaluator.process(output, class_label)
+            feats.append(output.cpu())
+            aid.append(target.cpu())
+
+        feats = torch.cat(feats, dim=0)
+        aid = torch.cat(aid, dim=0)
+        self.evaluator.process(output, aid)
 
         evaluation_results = self.evaluator.evaluate()
 
@@ -205,14 +214,16 @@ class Trainer:
 
     def parse_batch_test(self, batch_data):
         input_data = batch_data["img"].to(self.device)
-        class_label = batch_data["class_label"].to(self.device)
-        return input_data, class_label
+        target = batch_data["target"].to(self.device)
+        domain = batch_data["domain"]
+        return input_data, target, domain
 
     def forward_backward(self, batch_data):
         raise NotImplementedError
 
     def model_inference(self, input_data):
-        return self.model(input_data)
+        _, feat = self.model(input_data)
+        return feat
 
     def get_current_lr(self, model_names=None):
         model_name = self.get_model_names(model_names)[0]

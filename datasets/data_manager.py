@@ -83,7 +83,8 @@ def build_data_loader(
             batch_size = batch_size, 
             sampler = sampler, 
             num_workers = cfg.DATALOADER.NUM_WORKERS, 
-            collate_fn = test_collate_fn
+            collate_fn = test_collate_fn,
+            shuffle=False
         )
     
     assert len(data_loader) > 0, "Empty data loader"
@@ -120,6 +121,8 @@ class DataManager:
         # Num of animal IDs in the training set. If the same animal ID appears in different datasets, it will be counted multiple times as they come from different domains.
         self._num_classes = getattr(self.dataset, 'num_classes', None)
         self.class_names = getattr(self.dataset, 'class_names', None)
+        
+        self.len_query = len(self.dataset.query_data)
 
     @property
     def num_classes(self):
