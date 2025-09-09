@@ -28,8 +28,6 @@ def cosine_similarity(qf, gf):
     return dist_mat
 
 def eval_func(distmat, q_pids, g_pids, max_rank=50):
-    """Evaluation with market1501 metric (modified: do not discard same-camera matches).
-    """
     num_q, num_g = distmat.shape
     # distmat g
     #    q    1 3 2 4
@@ -40,6 +38,10 @@ def eval_func(distmat, q_pids, g_pids, max_rank=50):
     indices = np.argsort(distmat, axis=1)
     #  0 2 1 3
     #  1 2 3 0
+
+    q_pids = q_pids.cpu().numpy()
+    g_pids = g_pids.cpu().numpy()
+    
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
     # compute cmc curve for each query
     all_cmc = []
@@ -105,6 +107,7 @@ class ReID:
         rank1, mAP = eval_func(dist_mat, query_aids, gallery_aids)
          
         self.display(rank1, mAP)
+        return rank1, mAP
 
 
     def display(self, rank1, mAP):

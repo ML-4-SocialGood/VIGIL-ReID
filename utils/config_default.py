@@ -62,6 +62,7 @@ def get_cfg_default():
     _C.DATALOADER.TRAIN = CN()
     _C.DATALOADER.TRAIN.SAMPLER = "RandomSampler"
     _C.DATALOADER.TRAIN.BATCH_SIZE = 32
+    _C.DATALOADER.TRAIN.NUM_INSTANCES = 4
     # Setting for the test data loader
     _C.DATALOADER.TEST = CN()
     _C.DATALOADER.TEST.SAMPLER = "SequentialSampler"
@@ -73,6 +74,12 @@ def get_cfg_default():
     _C.MODEL = CN()
     _C.MODEL.NAME = ""
     _C.MODEL.BACKBONE = ""
+    _C.MODEL.METRIC_LOSS_TYPE = "triplet"
+    _C.MODEL.NO_MARGIN = False
+    _C.MODEL.IF_LABELSMOOTH = "on"
+    _C.MODEL.ID_LOSS_WEIGHT = 1.0
+    _C.MODEL.TRIPLET_LOSS_WEIGHT = 1.0
+    _C.MODEL.I2T_LOSS_WEIGHT = 1.0
 
     # DomainMix
     _C.MODEL.DOMAINMIX = CN()
@@ -209,10 +216,16 @@ def get_cfg_default():
     _C.TRAIN.PRINT_FREQ = 10
 
     # ====================
+    # Solver CfgNode
+    # ====================
+    _C.SOLVER = CN()
+    _C.SOLVER.MARGIN = 0.3
+
+    # ====================
     # Test CfgNode
     # ====================
     _C.TEST = CN()
-    _C.TEST.EVALUATOR = "Classification"
+    _C.TEST.EVALUATOR = "ReID"
     _C.TEST.SPLIT = "Test"
     _C.TEST.FINAL_Model = "last_step"
 

@@ -21,12 +21,12 @@ class MultiReID(DatasetBase):
         DATASET:
             NAME: "MultiReID"
             SOURCE_DOMAINS: ["tiger", "stoat"] 
-            TARGET_DOMAINS: ["market1501"]
+            TARGET_DOMAINS: ["stoat", "kiwi"]
     
     Domain label assignment:
         - tiger → domain_label = 0
         - stoat → domain_label = 1  
-        - market1501 → domain_label = 2
+        - kiwi → domain_label = 2
     """
     
     def __init__(self, cfg, verbose=True):
@@ -58,7 +58,7 @@ class MultiReID(DatasetBase):
         
         for domain_name in all_domains:
             if domain_name not in self.dataset_classes:
-                raise ValueError(f"Dataset '{domain_name}' not supported. Available: {list(self.dataset_classes.keys())}")
+                raise ValueError(f"Domain '{domain_name}' not supported. Available: {list(self.dataset_classes.keys())}")
             
             # Create individual dataset
             dataset_class = self.dataset_classes[domain_name]
@@ -86,7 +86,7 @@ class MultiReID(DatasetBase):
         
         # Build static per-domain ID offsets for globally unique labels
         domain_to_ids = defaultdict(set)
-        for d in self._trains_data:
+        for d in self._train_data:
             # Each "d" is a Datum with fields aid (local id) and domain_label (int)
             domain_to_ids[d.domain_label].add(d.aid)
 

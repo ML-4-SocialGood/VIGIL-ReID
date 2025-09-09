@@ -7,10 +7,10 @@ from tabulate import tabulate
 
 def get_dataset_info(dataset):
     aids_list, camids_list, viewids_list = [], [], []
-    for img_path, aid, camid, viewid in dataset:
-        aids_list.append(aid)
-        camids_list.append(camid)
-        viewids_list.append(viewid)
+    for entry in dataset:
+        aids_list.append(entry.aid)
+        camids_list.append(entry.camid)
+        viewids_list.append(entry.viewid)
 
     aids = set(aids_list)
     camids = set(camids_list)
@@ -89,6 +89,8 @@ class DatasetBase:
             gallery_data (list): A list of attributes of the gallery dataset.
             query_data (list): A list of attributes of the query dataset.
             domain (string): Domain label of this dataset, same as the name of the Dataset.
+            num_classes (int): Number of aniaml IDs in the training set.
+            class_names (list): List of class names of the training set.
         """
         self._dataset_dir = dataset_dir
         self._data_url = data_url
@@ -97,7 +99,7 @@ class DatasetBase:
         self._query_data = query_data
         self._domain = domain
         self._num_classes = self.get_num_classes()
-    
+        self.class_names = self.get_class_names()
     @property
     def dataset_dir(self):
         return self._dataset_dir
@@ -145,7 +147,10 @@ class DatasetBase:
                 )
     
     def get_num_classes(self):
-        return len(self._train_data[i].aid for i in range(len(self._train_data)))
+        return len([self._train_data[i].aid for i in range(len(self._train_data))])
+
+    def get_class_names(self):
+        return [self._train_data[i].aid for i in range(len(self._train_data))]
 
     def show_dataset_info(self):
         headers = ["Subset", "# images", "# ids", "# cameras"]

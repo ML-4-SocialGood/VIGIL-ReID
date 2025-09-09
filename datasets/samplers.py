@@ -11,7 +11,7 @@ def build_sampler(data_source, sampler_type, batch_size, num_instances=None):
     assert isinstance(batch_size, int)
     # assert isinstance(num_instances, int)
     
-    if sampler_type == "RandomIdentitySampler":
+    if "triplet" in sampler_type:
         sampler = RandomIdentitySampler(data_source, batch_size, num_instances)
     elif sampler_type == "RandomSampler":
         sampler = Sampler.RandomSampler(data_source)
@@ -27,7 +27,7 @@ class RandomIdentitySampler(Sampler):
         randomly sample K instances, therefore the batch size is N*K.
 
         Args:
-            data_source (list): A list of (img_path, aid, camid, viewid, domain).
+            data_source (list): A list of Datum objects.
             batch_size (int): The number of samples in a batch.
             num_instances (int): The number of instances per identity in a batch.
         """
@@ -37,7 +37,8 @@ class RandomIdentitySampler(Sampler):
         self.num_aids_per_batch = self.batch_size // self.num_instances
         self.index_dict = defaultdict(list)    # a dict with integer keys and list values (e.g., {aid:[indices]})
                                                # {327: [0, 6, 50, 118, 641, 1022], ...}
-        for index, (_, aid, _, _) in enumerate(self.data_source):
+        for index, datum in enumerate(self.data_source):
+            aid = datum.aid
             self.index_dict[aid].append(index)
         self.aids = list(self.index_dict.keys())    # a list of all IDs
 
@@ -85,11 +86,12 @@ class RandomIdentitySampler(Sampler):
 
 
 
-random.seed(0)
-data = [(f"img_{i}.jpg", i // 5, 0, 0) for i in range(15)]
-print(data)
-print()
-sampler = build_sampler(data_source = data, sampler_type = "RandomIdentitySampler", batch_size = 8, num_instances = 4)
-print(len(sampler))
-print(list(iter(sampler)))
-print(len(list(iter(sampler))))
+# Debug code removed - was causing print statements during import
+# random.seed(0)
+# data = [(f"img_{i}.jpg", i // 5, 0, 0) for i in range(15)]
+# print(data)
+# print()
+# sampler = build_sampler(data_source = data, sampler_type = "RandomIdentitySampler", batch_size = 8, num_instances = 4)
+# print(len(sampler))
+# print(list(iter(sampler)))
+# print(len(list(iter(sampler))))

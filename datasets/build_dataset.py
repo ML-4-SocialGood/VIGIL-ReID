@@ -1,8 +1,8 @@
-from utils import Registry, check_availability
-from datasets.dg.multi_reid import MultiReID
+from utils import Registry
 
 DATASET_REGISTRY = Registry("DATASET")
 
+from datasets.dg.multi_reid import MultiReID
 
 def build_dataset(cfg):
     """

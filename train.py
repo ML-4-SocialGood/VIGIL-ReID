@@ -46,8 +46,19 @@ def clean_cfg(cfg, model):
         model (str): model name.
     """
     keys = list(cfg.MODEL.keys())
+    # Preserve common top-level model settings required by the training/loss pipeline
+    preserve_keys = {
+        "NAME",
+        model,
+        "METRIC_LOSS_TYPE",
+        "NO_MARGIN",
+        "IF_LABELSMOOTH",
+        "ID_LOSS_WEIGHT",
+        "TRIPLET_LOSS_WEIGHT",
+        "I2T_LOSS_WEIGHT",
+    }
     for key in keys:
-        if key == "NAME" or key == model:
+        if key in preserve_keys:
             continue
         cfg.MODEL.pop(key, None)
 

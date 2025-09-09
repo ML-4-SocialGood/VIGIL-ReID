@@ -41,17 +41,18 @@ class CustomCLIP(nn.Module):
 
         prompt_template = PROMPT_TEMPLATES[cfg.DATASET.NAME]
         prompts = [
-            prompt_template.format(class_name.replace("_", " "))
+            prompt_template.format(str(class_name).replace("_", " "))
             for class_name in class_names
         ]
         prompts = torch.cat([clip.tokenize(prompt) for prompt in prompts])
         prompts = prompts.to(torch.cuda.current_device())
 
         with torch.no_grad():
-            self.text_features = clip_model.encode_text(prompts)
-            self.text_features = self.text_features / self.text_features.norm(
-                dim=-1, keepdim=True
-            )
+            text_features = clip_model.encode_text(prompts)
+            # Normalize with epsilon and keep computations in float32 for stability
+            text_features = text_features.float()
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            self.text_features = text_features
 
     def forward(self, image):
         adapter_ratio = 0.2
@@ -60,10 +61,14 @@ class CustomCLIP(nn.Module):
         image_features = (
             adapter_ratio * adapter_features + (1 - adapter_ratio) * image_features
         )
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 
-        logit_scale = self.logit_scale.exp()
-        logits = logit_scale * image_features @ self.text_features.t()
+        # Compute in float32 and normalize with epsilon to avoid NaN/Inf
+        image_features = image_features.float()
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+
+        # Stabilize logit scaling and similarity computation
+        logit_scale = self.logit_scale.float().exp().clamp(max=100.0)
+        logits = logit_scale * image_features @ self.text_features.float().t()
 
         return logits, image_features
 
@@ -117,7 +122,7 @@ class CLIPAdapter(Trainer):
     def forward_backward(self, batch_data):
         image, target, domain = self.parse_batch_train(batch_data)
         output, feat = self.model(image)
-        loss, center_criterion = make_loss(self.cfg, self.num_classes)
+        loss, center_criterion = make_loss(self.cfg, self.num_classes, self.device)
         loss = loss(output, feat, target, None)
 
         self.model_backward_and_update(loss)

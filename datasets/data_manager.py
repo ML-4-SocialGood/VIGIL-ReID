@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from tabulate import tabulate
 from .build_dataset import build_dataset
-from .sampler import build_sampler
+from .samplers import build_sampler
 from .transforms import build_transform
 
 
@@ -75,13 +75,9 @@ def build_data_loader(
             collate_fn = train_collate_fn
         )
     else:
-        sampler = build_sampler(data_source = data_source, 
-                                sampler_type = sampler_type, 
-                                batch_size = batch_size)
         data_loader = DataLoader(
             dataset = DatasetWrapper(cfg = cfg, data_source = data_source, transform = transform, is_train = is_train, domain_label_offsets = domain_label_offsets), 
             batch_size = batch_size, 
-            sampler = sampler, 
             num_workers = cfg.DATALOADER.NUM_WORKERS, 
             collate_fn = test_collate_fn,
             shuffle=False
@@ -95,8 +91,8 @@ class DataManager:
     def __init__(self, cfg):
         self.dataset = build_dataset(cfg)    # initialize multi-domain dataset, each domain is a dataset (eg. Kiwi, Tiger, Stoat)
 
-        transform_train = build_transform(cfg, is_train = True, is_interleave = False)
-        transform_test = build_transform(cfg, is_train = False, is_interleave = False)
+        transform_train = build_transform(cfg, is_train = True)
+        transform_test = build_transform(cfg, is_train = False)
         
         self.data_loader_train = build_data_loader(
             cfg = cfg, 

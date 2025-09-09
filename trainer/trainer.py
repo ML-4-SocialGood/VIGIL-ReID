@@ -31,9 +31,6 @@ class Trainer:
         self.num_classes = self.data_manager.num_classes
         self.num_source_domains = self.data_manager.num_source_domains
         self.len_query = self.data_manager.len_query
-        
-        # ReID doesn't have label name mapping
-        # self.class_label_name_mapping = self.data_manager.class_label_name_mapping
 
         self._models = OrderedDict()
         self._optimizers = OrderedDict()
@@ -133,12 +130,10 @@ class Trainer:
         self.num_batches = len(self.data_loader_train)
         end_time = time.time()
 
-        for self.batch_idx, (img_path, aid, camid, viewid, imgs, domain_labels) in enumerate(self.data_loader_train):
-            imgs = imgs.to(self.device)
-            target = aid.to(self.device)
-            domains = [self.data_manager.dataset.all_domains[i] for i in domain_labels]
+        for self.batch_idx, batch_data in enumerate(self.data_loader_train):
             data_time.update(time.time() - end_time)
-            loss_summary= self.forward_backward({"img": imgs, "target": target, "domain": domains})
+            # Delegate parsing to the helper so train/test share the same contract
+            loss_summary = self.forward_backward(batch_data)
 
             batch_time.update(time.time() - end_time)
             losses.update(loss_summary)
@@ -189,33 +184,31 @@ class Trainer:
         print("Evaluate on the {} Set".format(split))
 
         feats = []
-        aid = []
+        aids = []
 
-        for _, batch_data in enumerate(tqdm(data_loader)):
+        for _, batch_data in enumerate(data_loader):
             input_data, target, domain = self.parse_batch_test(batch_data)
             output = self.model_inference(input_data)
             feats.append(output.cpu())
-            aid.append(target.cpu())
+            aids.append(target.cpu())
 
         feats = torch.cat(feats, dim=0)
-        aid = torch.cat(aid, dim=0)
-        self.evaluator.process(output, aid)
+        aids = torch.cat(aids, dim=0)
+        rank1, mAP = self.evaluator.process(feats, aids)
 
-        evaluation_results = self.evaluator.evaluate()
-
-        return list(evaluation_results.values())[0]
+        return rank1, mAP
 
     def parse_batch_train(self, batch_data):
-        image = batch_data["img"].to(self.device)
-        target = batch_data["target"].to(self.device)
-        domain = batch_data["domain"]
+        image = batch_data["imgs"].to(self.device)
+        target = batch_data["aids"].to(self.device)
+        domain = batch_data["domains"]
 
         return image, target, domain
 
     def parse_batch_test(self, batch_data):
-        input_data = batch_data["img"].to(self.device)
-        target = batch_data["target"].to(self.device)
-        domain = batch_data["domain"]
+        input_data = batch_data["imgs"].to(self.device)
+        target = batch_data["aids"].to(self.device)
+        domain = batch_data["domains"]
         return input_data, target, domain
 
     def forward_backward(self, batch_data):

@@ -1,6 +1,8 @@
 DATALOADER:
   TRAIN:
     BATCH_SIZE: 64
+    NUM_INSTANCES: 8
+    SAMPLER: "softmax_triplet"
   TEST:
     BATCH_SIZE: 64
   NUM_WORKERS: 8
@@ -26,6 +28,9 @@ TRAIN:
 
 MODEL:
   NAME: CLIPAdapter
+  METRIC_LOSS_TYPE: "triplet"
+  NO_MARGIN: False
+  IF_LABELSMOOTH: "on"
   CLIPAdapter:
     # BACKBONE: "RN50"
     BACKBONE: "ViT-B/32"

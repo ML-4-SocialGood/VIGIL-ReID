@@ -19,7 +19,7 @@ class Kiwi(DatasetBase):
     """
     def __init__(self, cfg, domain_label, verbose = True):
         self._dataset_dir = "Kiwi"
-        root = cfg.DATASET.ROOT_DIR
+        root = cfg.DATASET.ROOT
         self._dataset_path = os.path.join(root, self._dataset_dir)
         self._domain = "kiwi"
         self._domain_label = domain_label

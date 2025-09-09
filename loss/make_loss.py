@@ -11,8 +11,8 @@ from .center_loss import CenterLoss
 from .supcontrast import ImgToProConLoss
 
 
-def make_loss(cfg, num_classes):    # modified by gu
-    sampler = cfg.DATALOADER.SAMPLER
+def make_loss(cfg, num_classes, device):    # modified by gu
+    sampler = cfg.DATALOADER.TRAIN.SAMPLER
     feat_dim = 2048
     center_criterion = CenterLoss(num_classes=num_classes, feat_dim=feat_dim, use_gpu=True)  # center loss
     if 'triplet' in cfg.MODEL.METRIC_LOSS_TYPE:
@@ -34,8 +34,8 @@ def make_loss(cfg, num_classes):    # modified by gu
         def loss_func(score, feat, target):
             return F.cross_entropy(score, target)
 
-    elif sampler == 'RandomIdentitySampler':
-        i2p_contrast_loss = ImgToProConLoss(cfg.MODEL.DEVICE)
+    elif sampler == 'softmax_triplet':
+        i2p_contrast_loss = ImgToProConLoss(device)
         def loss_func(score, feat, target, target_cam, i2tscore = None, t_prototypes = None, batch_aids = None):
             if cfg.MODEL.METRIC_LOSS_TYPE == 'triplet':
                 if cfg.MODEL.IF_LABELSMOOTH == 'on':
@@ -56,7 +56,7 @@ def make_loss(cfg, num_classes):    # modified by gu
                     loss = cfg.MODEL.ID_LOSS_WEIGHT * ID_LOSS + cfg.MODEL.TRIPLET_LOSS_WEIGHT * TRI_LOSS
                     
                     if t_prototypes is not None: 
-                        prototypes_labels = torch.arange(t_prototypes.size(0)).to(cfg.MODEL.DEVICE)
+                        prototypes_labels = torch.arange(t_prototypes.size(0)).to(device)
                         I2P_LOSS = i2p_contrast_loss(image_features = feat[-1], 
                                                      text_prototypes = t_prototypes, 
                                                      i_labels = target, 
@@ -95,7 +95,7 @@ def make_loss(cfg, num_classes):    # modified by gu
 
     else:
         print('expected sampler should be softmax, or RandomIdentitySampler'
-              'but got {}'.format(cfg.DATALOADER.SAMPLER))
+              'but got {}'.format(cfg.DATALOADER.TRAIN.SAMPLER))
     return loss_func, center_criterion
 
 
