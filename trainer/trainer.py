@@ -216,13 +216,6 @@ class Trainer:
     def forward_backward(self, batch_data):
         raise NotImplementedError
 
-    def model_inference(self, input_data):
-        _, feat = self.model(input_data)
-        # Normalize features for evaluation stability
-        feat = feat.float()
-        feat = feat / feat.norm(dim=-1, keepdim=True).clamp(min=1e-6)
-        return feat
-
     def get_current_lr(self, model_names=None):
         model_name = self.get_model_names(model_names)[0]
         return self._optimizers[model_name].param_groups[0]["lr"]

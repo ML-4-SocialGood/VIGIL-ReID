@@ -11,6 +11,8 @@ from utils import PROMPT_TEMPLATES
 class CLIPZeroShot(Trainer):
     def build_model(self):
         class_names = self.data_manager.dataset.class_names
+        domain_names = self.data_manager.dataset.source_domains
+
 
         self.clip_model, _ = clip.load(
             self.cfg.MODEL.CLIPZeroShot.BACKBONE,
@@ -19,8 +21,8 @@ class CLIPZeroShot(Trainer):
         )
         prompt_template = PROMPT_TEMPLATES[self.cfg.DATASET.NAME]
         prompts = [
-            # currently using animal ID directly in the prompt
-            prompt_template.format(str(class_name).replace("_", " "))
+            # currently using first source domain and animal id directly in the prompt
+            prompt_template.format((domain_names[0] + str(class_name)).replace("_", " "))
             for class_name in class_names
         ]
         # print(f"Prompts: {prompts}")

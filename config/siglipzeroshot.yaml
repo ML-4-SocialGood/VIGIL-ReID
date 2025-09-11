@@ -8,17 +8,16 @@ DATALOADER:
   NUM_WORKERS: 8
 
 INPUT:
-  SIZE: (224, 224)
+  SIZE: (384, 384)
   INTERPOLATION: "bicubic"
-  PIXEL_MEAN: [0.48145466, 0.4578275, 0.40821073]
-  PIXEL_STD: [0.26862954, 0.26130258, 0.27577711]
-  TRANSFORMS: ["random_resized_crop", "random_flip", "normalize"]
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
 
 OPTIM:
   NAME: "sgd"
   LR: 0.002
-  MAX_EPOCH: 50
-  LR_SCHEDULER: "Cosine"
+  MAX_EPOCH: 200
+  LR_SCHEDULER: "cosine"
   WARMUP_EPOCH: 1
   WARMUP_TYPE: "constant"
   WARMUP_CONS_LR: 1e-5
@@ -27,14 +26,10 @@ TRAIN:
   PRINT_FREQ: 5
 
 MODEL:
-  NAME: CLIPAdapter
+  NAME: SIGLIPZeroShot
   METRIC_LOSS_TYPE: "triplet"
-  NO_MARGIN: True
+  NO_MARGIN: False
   IF_LABELSMOOTH: "on"
-  ID_LOSS_WEIGHT: 0.0
-  CLIPAdapter:
+  SIGLIPZeroShot:
     # BACKBONE: "RN50"
-    BACKBONE: "ViT-B/32"
-
-SOLVER:
-  MARGIN: 0.1
+    CKPT: "google/siglip-so400m-patch14-384"

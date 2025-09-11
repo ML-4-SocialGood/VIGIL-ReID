@@ -95,6 +95,8 @@ def print_args(args, cfg):
 def main(args):
     cfg = setup_cfg(args)
 
+    zero_shot_models = ["CLIPZeroShot", "SIGLIPZeroShot"]
+
     if cfg.SEED >= 0:
         set_random_seed(cfg.SEED)
 
@@ -109,7 +111,7 @@ def main(args):
     # print("** System info **\n{}\n".format(collect_env_info()))
 
     trainer = build_trainer(cfg)
-    if args.model == "CLIPZeroShot":
+    if args.model in zero_shot_models:
         trainer.test()
     else:
         trainer.train()
