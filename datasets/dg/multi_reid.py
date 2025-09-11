@@ -7,7 +7,7 @@ from datasets.dg.tiger import Tiger
 from datasets.dg.stoat import Stoat
 from datasets.dg.kiwi import Kiwi
 from collections import defaultdict
-
+from utils import check_availability
 
 @DATASET_REGISTRY.register()
 class MultiReID(DatasetBase):
@@ -33,12 +33,7 @@ class MultiReID(DatasetBase):
         self.cfg = cfg
         self._dataset_dir = "MultiReID"
         
-        # Available dataset classes mapping
-        self.dataset_classes = {
-            "tiger": Tiger,
-            "stoat": Stoat,
-            "kiwi": Kiwi
-        }
+        available_datasets = DATASET_REGISTRY.registered_names()
         
         # Combine all domains
         all_domains = set()
@@ -48,7 +43,8 @@ class MultiReID(DatasetBase):
             all_domains.update(cfg.DATASET.TARGET_DOMAINS)
 
         self.all_domains = list(all_domains)
-
+        self.source_domains = cfg.DATASET.SOURCE_DOMAINS if hasattr(cfg.DATASET, 'SOURCE_DOMAINS') else []
+        self.target_domains = cfg.DATASET.TARGET_DOMAINS if hasattr(cfg.DATASET, 'TARGET_DOMAINS') else []
         
 
         # Load datasets and combine data
@@ -57,12 +53,10 @@ class MultiReID(DatasetBase):
         query_data = []
         
         for domain_name in all_domains:
-            if domain_name not in self.dataset_classes:
-                raise ValueError(f"Domain '{domain_name}' not supported. Available: {list(self.dataset_classes.keys())}")
-            
-            # Create individual dataset
-            dataset_class = self.dataset_classes[domain_name]
-            dataset = dataset_class(cfg, domain_label=self._get_domain_label_for_dataset(domain_name), verbose=False)
+            check_availability(domain_name, available_datasets)
+
+            # Create individual dataset instance
+            dataset = DATASET_REGISTRY.get(domain_name)(cfg, domain_label=self._get_domain_label_for_dataset(domain_name), verbose=False)
 
             # Combine the data, test consists of gallery + query
             if domain_name in cfg.DATASET.SOURCE_DOMAINS:

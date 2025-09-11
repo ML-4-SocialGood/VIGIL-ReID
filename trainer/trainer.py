@@ -240,6 +240,12 @@ class Trainer:
         else:
             return list(self._models.keys())
 
+    def model_inference(self, input_data):
+        _, feat = self.model(input_data)
+        # Normalize features for evaluation stability
+        feat = torch.nn.functional.normalize(feat, dim=-1, eps=1e-6)
+        return feat
+    
     def save_model(
         self,
         current_epoch,
