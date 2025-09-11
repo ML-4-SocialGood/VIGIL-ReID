@@ -3,7 +3,7 @@ import numpy as np
 import random
 
 from collections import defaultdict
-from torch.utils.data.sampler import Sampler
+from torch.utils.data.sampler import Sampler, RandomSampler, SequentialSampler
 
 
 def build_sampler(data_source, sampler_type, batch_size, num_instances=None):
@@ -11,12 +11,12 @@ def build_sampler(data_source, sampler_type, batch_size, num_instances=None):
     assert isinstance(batch_size, int)
     # assert isinstance(num_instances, int)
     
-    if "triplet" in sampler_type:
+    if sampler_type == "RandomIdentitySampler":
         sampler = RandomIdentitySampler(data_source, batch_size, num_instances)
     elif sampler_type == "RandomSampler":
-        sampler = Sampler.RandomSampler(data_source)
+        sampler = RandomSampler(data_source)
     elif sampler_type == "SequentialSampler":
-        sampler = Sampler.SequentialSampler(data_source)
+        sampler = SequentialSampler(data_source)
     return sampler
 
 

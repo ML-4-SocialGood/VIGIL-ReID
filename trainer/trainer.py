@@ -130,6 +130,9 @@ class Trainer:
         self.num_batches = len(self.data_loader_train)
         end_time = time.time()
 
+        print("reported", len(self.data_loader_train))
+        print("actual", sum(1 for _ in self.data_loader_train))
+
         for self.batch_idx, batch_data in enumerate(self.data_loader_train):
             data_time.update(time.time() - end_time)
             # Delegate parsing to the helper so train/test share the same contract
@@ -140,7 +143,7 @@ class Trainer:
 
             if (
                 (self.batch_idx + 1) % self.cfg.TRAIN.PRINT_FREQ == 0
-                or self.num_batches < self.cfg.TRAIN.PRINT_FREQ
+                or self.num_batches < self.cfg.TRAIN.PRINT_FREQ or True
             ):
                 num_batches_remain = 0
                 num_batches_remain += self.num_batches - self.batch_idx - 1
@@ -164,6 +167,8 @@ class Trainer:
         pass
 
     def after_epoch(self):
+        # Step LR scheduler once per epoch
+        self.update_lr()
         if self.current_epoch + 1 == self.max_epoch:
             self.save_model(self.current_epoch, self.output_dir)
 
@@ -216,6 +221,9 @@ class Trainer:
 
     def model_inference(self, input_data):
         _, feat = self.model(input_data)
+        # Normalize features for evaluation stability
+        feat = feat.float()
+        feat = feat / feat.norm(dim=-1, keepdim=True).clamp(min=1e-6)
         return feat
 
     def get_current_lr(self, model_names=None):

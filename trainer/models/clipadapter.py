@@ -34,13 +34,14 @@ class CustomCLIP(nn.Module):
         self.image_encoder = clip_model.visual
         self.logit_scale = clip_model.logit_scale
         if self.cfg.MODEL.CLIPAdapter.BACKBONE == "RN50":
-            self.adapter = Adapter(1024, 4).to(clip_model.dtype)
+            self.adapter = Adapter(1024, 4)
         elif self.cfg.MODEL.CLIPAdapter.BACKBONE == "ViT-B/32":
-            self.adapter = Adapter(512, 4).to(clip_model.dtype)
+            self.adapter = Adapter(512, 4)
         self.dtype = clip_model.dtype
 
         prompt_template = PROMPT_TEMPLATES[cfg.DATASET.NAME]
         prompts = [
+            # currently using animal ID directly in the prompt
             prompt_template.format(str(class_name).replace("_", " "))
             for class_name in class_names
         ]
@@ -55,22 +56,25 @@ class CustomCLIP(nn.Module):
             self.text_features = text_features
 
     def forward(self, image):
-        adapter_ratio = 0.2
+        adapter_ratio = 0.8
         image_features = self.image_encoder(image.type(self.dtype))
-        adapter_features = self.adapter(image_features)
-        image_features = (
-            adapter_ratio * adapter_features + (1 - adapter_ratio) * image_features
+        # Run adapter and mixing in float32 for numerical stability
+        base_features = image_features.float()
+        adapter_features = self.adapter(base_features)
+        mixed_features = (
+            adapter_ratio * adapter_features + (1 - adapter_ratio) * base_features
         )
 
-        # Compute in float32 and normalize with epsilon to avoid NaN/Inf
-        image_features = image_features.float()
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+        # Normalize safely in float32
+        norm = mixed_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+        mixed_features_norm = mixed_features / norm
 
         # Stabilize logit scaling and similarity computation
         logit_scale = self.logit_scale.float().exp().clamp(max=100.0)
-        logits = logit_scale * image_features @ self.text_features.float().t()
+        logits = logit_scale * mixed_features_norm @ self.text_features.float().t()
 
-        return logits, image_features
+        # Return logits and unnormalized float32 features for metric losses
+        return logits, mixed_features
 
 
 @MODEL_REGISTRY.register()
@@ -132,7 +136,6 @@ class CLIPAdapter(Trainer):
             # "acc": compute_accuracy(output, target)[0].item(),
         }
 
-        if (self.batch_idx + 1) == self.num_batches:
-            self.update_lr()
+        # LR scheduler now steps once per epoch in Trainer.after_epoch
 
         return loss_summary

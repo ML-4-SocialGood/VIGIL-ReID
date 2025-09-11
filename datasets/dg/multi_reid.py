@@ -99,6 +99,17 @@ class MultiReID(DatasetBase):
         # Expose the total number of globally unique classes (train-time)
         self.num_classes = running_offset
 
+        # Build globally unique class names using domain-specific offsets
+        # Each global class id = local aid + offset(domain_label)
+        global_ids = set()
+        for d in self._train_data:
+            global_id = self.domain_label_offsets[d.domain_label] + d.aid
+            global_ids.add(global_id)
+
+        # Sorted list for stable indexing/order
+        self.class_names = sorted(global_ids)
+
+
         # Calculate statistics
         self.num_train_imgs, self.num_train_aids, self.num_train_cams, self.num_train_views = get_dataset_info(self.train_data)
         self.num_gallery_imgs, self.num_gallery_aids, self.num_gallery_cams, self.num_gallery_views = get_dataset_info(self.gallery_data)

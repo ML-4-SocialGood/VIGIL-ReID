@@ -1,6 +1,8 @@
 DATALOADER:
   TRAIN:
-    BATCH_SIZE: 64
+    BATCH_SIZE: 32
+    NUM_INSTANCES: 4
+    SAMPLER: "RandomIdentitySampler"
   TEST:
     BATCH_SIZE: 64
   NUM_WORKERS: 8
@@ -26,6 +28,9 @@ TRAIN:
 
 MODEL:
   NAME: CLIPZeroShot
+  METRIC_LOSS_TYPE: "triplet"
+  NO_MARGIN: False
+  IF_LABELSMOOTH: "on"
   CLIPZeroShot:
     # BACKBONE: "RN50"
     BACKBONE: "ViT-B/32"

@@ -37,30 +37,30 @@ def reset_cfg_from_args(cfg, args):
         cfg.MODEL.NAME = args.model
 
 
-def clean_cfg(cfg, model):
-    """Remove Unused Model Configs
+# def clean_cfg(cfg, model):
+#     """Remove Unused Model Configs
 
 
-    Args:
-        cfg (_C): Config Node.
-        model (str): model name.
-    """
-    keys = list(cfg.MODEL.keys())
-    # Preserve common top-level model settings required by the training/loss pipeline
-    preserve_keys = {
-        "NAME",
-        model,
-        "METRIC_LOSS_TYPE",
-        "NO_MARGIN",
-        "IF_LABELSMOOTH",
-        "ID_LOSS_WEIGHT",
-        "TRIPLET_LOSS_WEIGHT",
-        "I2T_LOSS_WEIGHT",
-    }
-    for key in keys:
-        if key in preserve_keys:
-            continue
-        cfg.MODEL.pop(key, None)
+#     Args:
+#         cfg (_C): Config Node.
+#         model (str): model name.
+#     """
+#     keys = list(cfg.MODEL.keys())
+#     # Preserve common top-level model settings required by the training/loss pipeline
+#     preserve_keys = {
+#         "NAME",
+#         model,
+#         "METRIC_LOSS_TYPE",
+#         "NO_MARGIN",
+#         "IF_LABELSMOOTH",
+#         "ID_LOSS_WEIGHT",
+#         "TRIPLET_LOSS_WEIGHT",
+#         "I2T_LOSS_WEIGHT",
+#     }
+#     for key in keys:
+#         if key in preserve_keys:
+#             continue
+#         cfg.MODEL.pop(key, None)
 
 
 def setup_cfg(args):
@@ -71,7 +71,7 @@ def setup_cfg(args):
 
     reset_cfg_from_args(cfg, args)
 
-    clean_cfg(cfg, args.model)
+    # clean_cfg(cfg, args.model)
 
     cfg.freeze()
 

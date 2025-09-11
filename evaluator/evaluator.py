@@ -113,8 +113,8 @@ class ReID:
     def display(self, rank1, mAP):
         evaluation_table = [
             ["Queries #", f"{self.len_query:,}"],
-            ["Rank1", f"{rank1:.2f}%"],
-            ["mAP", f"{mAP:.2f}%"],
+            ["Rank1", f"{rank1*100:.2f}%"],
+            ["mAP", f"{mAP*100:.2f}%"],
         ]
         print(tabulate(evaluation_table))
 

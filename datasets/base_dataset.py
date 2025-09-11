@@ -98,8 +98,6 @@ class DatasetBase:
         self._gallery_data = gallery_data
         self._query_data = query_data
         self._domain = domain
-        self._num_classes = self.get_num_classes()
-        self.class_names = self.get_class_names()
     @property
     def dataset_dir(self):
         return self._dataset_dir
@@ -145,12 +143,6 @@ class DatasetBase:
                         self._domains, domain
                     )
                 )
-    
-    def get_num_classes(self):
-        return len([self._train_data[i].aid for i in range(len(self._train_data))])
-
-    def get_class_names(self):
-        return [self._train_data[i].aid for i in range(len(self._train_data))]
 
     def show_dataset_info(self):
         headers = ["Subset", "# images", "# ids", "# cameras"]

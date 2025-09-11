@@ -18,23 +18,23 @@ def make_loss(cfg, num_classes, device):    # modified by gu
     if 'triplet' in cfg.MODEL.METRIC_LOSS_TYPE:
         if cfg.MODEL.NO_MARGIN:
             triplet = TripletLoss()
-            print("using soft triplet loss for training")
+            # print("using soft triplet loss for training")
         else:
             triplet = TripletLoss(cfg.SOLVER.MARGIN)  # triplet loss
-            print("using triplet loss with margin:{}".format(cfg.SOLVER.MARGIN))
-    else:
-        print('expected METRIC_LOSS_TYPE should be triplet'
-              'but got {}'.format(cfg.MODEL.METRIC_LOSS_TYPE))
+            # print("using triplet loss with margin:{}".format(cfg.SOLVER.MARGIN))
+    # else:
+    #     print('expected METRIC_LOSS_TYPE should be triplet'
+    #           'but got {}'.format(cfg.MODEL.METRIC_LOSS_TYPE))
 
     if cfg.MODEL.IF_LABELSMOOTH == 'on':
         xent = CrossEntropyLabelSmooth(num_classes=num_classes)
-        print("label smooth on, numclasses:", num_classes)
+        # print("label smooth on, numclasses:", num_classes)
 
     if sampler == 'softmax':
         def loss_func(score, feat, target):
             return F.cross_entropy(score, target)
 
-    elif sampler == 'softmax_triplet':
+    elif sampler == 'RandomIdentitySampler':
         i2p_contrast_loss = ImgToProConLoss(device)
         def loss_func(score, feat, target, target_cam, i2tscore = None, t_prototypes = None, batch_aids = None):
             if cfg.MODEL.METRIC_LOSS_TYPE == 'triplet':
@@ -42,15 +42,15 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     if isinstance(score, list):
                         ID_LOSS = [xent(scor, target) for scor in score[0:]]
                         ID_LOSS = sum(ID_LOSS)
-                        # print(ID_LOSS)
+                        print("ID_LOSS", ID_LOSS)
                     else:
                         ID_LOSS = xent(score, target)
 
                     if isinstance(feat, list):
                         TRI_LOSS = [triplet(feats, target)[0] for feats in feat[0:]]
                         TRI_LOSS = sum(TRI_LOSS)
-                        # print(TRI_LOSS)
-                    else:   
+                        print("TRI_LOSS", TRI_LOSS)
+                    else:
                         TRI_LOSS = triplet(feat, target)[0]
                     
                     loss = cfg.MODEL.ID_LOSS_WEIGHT * ID_LOSS + cfg.MODEL.TRIPLET_LOSS_WEIGHT * TRI_LOSS
@@ -67,6 +67,9 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     #     I2TLOSS = xent(i2tscore, target)
                     #     loss = cfg.MODEL.I2T_LOSS_WEIGHT * I2TLOSS + loss
                         
+                    if not torch.is_tensor(loss):
+                        base = score[0] if isinstance(score, list) else score
+                        loss = torch.as_tensor(loss, dtype=base.dtype, device=base.device)
                     return loss
                 else:
                     if isinstance(score, list):
@@ -78,8 +81,10 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     if isinstance(feat, list):
                             TRI_LOSS = [triplet(feats, target)[0] for feats in feat[0:]]
                             TRI_LOSS = sum(TRI_LOSS)
+                            print("TRI_LOSS3", TRI_LOSS)
                     else:
                             TRI_LOSS = triplet(feat, target)[0]
+                            print("TRI_LOSS4", TRI_LOSS)
 
                     loss = cfg.MODEL.ID_LOSS_WEIGHT * ID_LOSS + cfg.MODEL.TRIPLET_LOSS_WEIGHT * TRI_LOSS
                     
@@ -88,6 +93,9 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                         loss = cfg.MODEL.I2T_LOSS_WEIGHT * I2TLOSS + loss
 
 
+                    if not torch.is_tensor(loss):
+                        base = score[0] if isinstance(score, list) else score
+                        loss = torch.as_tensor(loss, dtype=base.dtype, device=base.device)
                     return loss
             else:
                 print('expected METRIC_LOSS_TYPE should be triplet'
