@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-AVAILABLE_OPTIMIZERS = ["sgd", "adam"]
+AVAILABLE_OPTIMIZERS = ["sgd", "adam", "adamw"]
 
 
 def build_optimizer(model, optim_cfg, param_groups=None):
@@ -35,6 +35,12 @@ def build_optimizer(model, optim_cfg, param_groups=None):
             )
     elif optim_cfg.NAME == "adam":
         optimizer = torch.optim.Adam(
+            params=param_groups,
+            lr=optim_cfg.LR,
+            weight_decay=optim_cfg.WEIGHT_DECAY
+        )
+    elif optim_cfg.NAME == "adamw":
+        optimizer = torch.optim.AdamW(
             params=param_groups,
             lr=optim_cfg.LR,
             weight_decay=optim_cfg.WEIGHT_DECAY

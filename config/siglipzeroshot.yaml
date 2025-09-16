@@ -31,5 +31,4 @@ MODEL:
   NO_MARGIN: False
   IF_LABELSMOOTH: "on"
   SIGLIPZeroShot:
-    # BACKBONE: "RN50"
     CKPT: "google/siglip-so400m-patch14-384"

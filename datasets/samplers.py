@@ -82,16 +82,3 @@ class RandomIdentitySampler(Sampler):
 
     def __len__(self):
         return self.length
-
-
-
-
-# Debug code removed - was causing print statements during import
-# random.seed(0)
-# data = [(f"img_{i}.jpg", i // 5, 0, 0) for i in range(15)]
-# print(data)
-# print()
-# sampler = build_sampler(data_source = data, sampler_type = "RandomIdentitySampler", batch_size = 8, num_instances = 4)
-# print(len(sampler))
-# print(list(iter(sampler)))
-# print(len(list(iter(sampler))))

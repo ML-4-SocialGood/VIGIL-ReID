@@ -1,0 +1,40 @@
+DATALOADER:
+  TRAIN:
+    BATCH_SIZE: 32
+    NUM_INSTANCES: 4
+    SAMPLER: "RandomIdentitySampler"
+  TEST:
+    BATCH_SIZE: 64
+  NUM_WORKERS: 8
+
+INPUT:
+  SIZE: (384, 384)
+  INTERPOLATION: "bicubic"
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+  TRANSFORMS: ["random_resized_crop", "random_flip", "normalize"]
+
+OPTIM:
+  NAME: "adamw"  # Changed from sgd for smoother adapter training
+  LR: 0.0005  # Reduced from 0.002 for more stable adapter training
+  MAX_EPOCH: 100  # Increased from 50 for better convergence
+  LR_SCHEDULER: "Cosine"
+  WARMUP_EPOCH: 1
+  WARMUP_TYPE: "constant"
+  WARMUP_CONS_LR: 1e-5
+
+TRAIN:
+  PRINT_FREQ: 5
+
+MODEL:
+  NAME: SIGLIPAdapter
+  METRIC_LOSS_TYPE: "triplet"
+  NO_MARGIN: True
+  IF_LABELSMOOTH: "on"
+  ID_LOSS_WEIGHT: 1.0
+  TRIPLET_LOSS_WEIGHT: 2.0  # Higher for better metric learning
+  SIGLIPAdapter:
+    CKPT: "google/siglip-so400m-patch14-384"
+
+SOLVER:
+  MARGIN: 0.1

@@ -7,7 +7,7 @@ def get_cfg_default():
     # ====================
     _C = CN()
     _C.OUTPUT_DIR = "./output/"
-    _C.SEED = -1
+    _C.SEED = 41
 
     # ====================
     # Input CfgNode
@@ -116,6 +116,10 @@ def get_cfg_default():
     # CLIPAdapter
     _C.MODEL.CLIPAdapter = CN()
     _C.MODEL.CLIPAdapter.BACKBONE = "ViT-B/32"
+
+    # SIGLIPAdapter
+    _C.MODEL.SIGLIPAdapter = CN()
+    _C.MODEL.SIGLIPAdapter.CKPT = "google/siglip-so400m-patch14-384"
 
     # RISE
     _C.MODEL.RISE = CN()
