@@ -42,14 +42,12 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     if isinstance(score, list):
                         ID_LOSS = [xent(scor, target) for scor in score[0:]]
                         ID_LOSS = sum(ID_LOSS)
-                        print("ID_LOSS", ID_LOSS)
                     else:
                         ID_LOSS = xent(score, target)
 
                     if isinstance(feat, list):
                         TRI_LOSS = [triplet(feats, target)[0] for feats in feat[0:]]
                         TRI_LOSS = sum(TRI_LOSS)
-                        print("TRI_LOSS", TRI_LOSS)
                     else:
                         TRI_LOSS = triplet(feat, target)[0]
                     
@@ -70,7 +68,7 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     if not torch.is_tensor(loss):
                         base = score[0] if isinstance(score, list) else score
                         loss = torch.as_tensor(loss, dtype=base.dtype, device=base.device)
-                    return loss
+                    return loss, ID_LOSS, TRI_LOSS
                 else:
                     if isinstance(score, list):
                         ID_LOSS = [F.cross_entropy(scor, target) for scor in score[0:]]
@@ -81,10 +79,8 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     if isinstance(feat, list):
                             TRI_LOSS = [triplet(feats, target)[0] for feats in feat[0:]]
                             TRI_LOSS = sum(TRI_LOSS)
-                            print("TRI_LOSS3", TRI_LOSS)
                     else:
                             TRI_LOSS = triplet(feat, target)[0]
-                            print("TRI_LOSS4", TRI_LOSS)
 
                     loss = cfg.MODEL.ID_LOSS_WEIGHT * ID_LOSS + cfg.MODEL.TRIPLET_LOSS_WEIGHT * TRI_LOSS
                     
@@ -96,7 +92,7 @@ def make_loss(cfg, num_classes, device):    # modified by gu
                     if not torch.is_tensor(loss):
                         base = score[0] if isinstance(score, list) else score
                         loss = torch.as_tensor(loss, dtype=base.dtype, device=base.device)
-                    return loss
+                    return loss, ID_LOSS, TRI_LOSS
             else:
                 print('expected METRIC_LOSS_TYPE should be triplet'
                       'but got {}'.format(cfg.MODEL.METRIC_LOSS_TYPE))

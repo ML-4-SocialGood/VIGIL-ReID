@@ -28,14 +28,16 @@ class Adapter(nn.Module):
 
 
 class CustomSIGLIP(nn.Module):
-    def __init__(self, cfg, num_classes, siglip_model):
+    def __init__(self, cfg, num_classes, siglip_model, domains):
         super().__init__()
         self.cfg = cfg
         self.image_encoder = siglip_model.vision_model
         # self.logit_scale = siglip_model.logit_scale
 
         feature_dim = self.image_encoder.config.hidden_size
-        self.adapter = Adapter(feature_dim, 4)
+        self.adapter_dict = nn.ModuleDict()
+        for i, domain in enumerate(domains):
+            self.adapter_dict[f"adapter_{i}"] = Adapter(feature_dim, 4)
         self.dtype = siglip_model.dtype
 
         # Use SigLIP's visual projection so our features align with zero-shot
@@ -68,17 +70,31 @@ class CustomSIGLIP(nn.Module):
         #     text_features = text_features / text_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
         #     self.text_features = text_features
 
-    def forward(self, image):
+    def forward(self, image, domains):
         adapter_ratio = 0.4  
         image_features = self.image_encoder(image)
         # Extract the pooled output from the model output
         image_features = image_features.pooler_output
         # Run adapter and mixing in float32 for numerical stability
         base_features = image_features.float()
-        adapter_features = self.adapter(base_features)
-        mixed_features = (
-            adapter_ratio * adapter_features + (1 - adapter_ratio) * base_features
-        )
+        
+        # Process each sample individually using its corresponding domain
+        mixed_features = torch.zeros_like(base_features)
+        
+        for i, domain_id in enumerate(domains):
+            # Get the feature for this specific image
+            feature = base_features[i:i+1]  # Keep batch dimension: [1, hidden_dim]
+            
+            # Apply the corresponding adapter
+            adapter_features = self.adapter_dict[f"adapter_{domain_id}"](feature)
+            
+            # Mix the features
+            mixed_feature = (
+                adapter_ratio * adapter_features + (1 - adapter_ratio) * feature
+            )
+            
+            # Put it back
+            mixed_features[i] = mixed_feature.squeeze(0)
 
         # Project to SigLIP's retrieval space and normalize
         projected = self.proj_layer(mixed_features)
@@ -93,7 +109,8 @@ class CustomSIGLIP(nn.Module):
 
 @MODEL_REGISTRY.register()
 class SIGLIPAdapter(Trainer):
-    """SIGLIP-Adapter
+    """
+    SIGLIP-Adapter for multi-source domain adaptation
     """
 
     def build_model(self):
@@ -105,7 +122,7 @@ class SIGLIPAdapter(Trainer):
 
         print("Building Custom SIGLIP")
         self.model = CustomSIGLIP(
-            self.cfg, self.data_manager.dataset.num_classes, siglip_model
+            self.cfg, self.data_manager.dataset.num_classes, siglip_model, self.data_manager.get_source_domains
         )
 
         print("Turning Off Gradients in Image and Text Encoder")
@@ -123,7 +140,7 @@ class SIGLIPAdapter(Trainer):
         self.model.to(self.device)
 
         # NOTE: Give both adapter and classifier to the Optimizer
-        trainable_params = list(self.model.adapter.parameters()) + list(self.model.classifier.parameters())
+        trainable_params = list(self.model.adapter_dict.parameters()) + list(self.model.classifier.parameters())
         self.optimizer = build_optimizer(trainable_params, self.cfg.OPTIM)
         self.lr_scheduler = build_lr_scheduler(self.optimizer, self.cfg.OPTIM)
 
@@ -135,8 +152,8 @@ class SIGLIPAdapter(Trainer):
         )
 
     def forward_backward(self, batch_data):
-        image, target, domain = self.parse_batch_train(batch_data)
-        output, feat = self.model(image)
+        image, target, domains = self.parse_batch_train(batch_data)
+        output, feat = self.model(image, domains)
         loss_func, center_criterion = make_loss(self.cfg, self.num_classes, self.device)
         loss, ID_LOSS, TRI_LOSS = loss_func(output, feat, target, None)
 

@@ -135,6 +135,14 @@ class DataManager:
         return self.dataset.num_train_imgs
     
     @property
+    def get_source_domains(self):
+        return self.dataset.source_domains
+
+    @property
+    def get_target_domains(self):
+        return self.dataset.target_domains
+
+    @property
     def get_num_train_aids(self):
         return self.dataset.num_train_aids
     
