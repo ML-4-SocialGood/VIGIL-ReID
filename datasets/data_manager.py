@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from tabulate import tabulate
 from .build_dataset import build_dataset
-from .samplers import build_sampler
+from .sampler import build_sampler
 from .transforms import build_transform
 
 
@@ -60,15 +60,16 @@ def build_data_loader(
         batch_size = 32, 
         transform = None, 
         is_train = True,
-        domain_label_offsets = None
+        source_domains = None
 ):
     if is_train:
         sampler = build_sampler(data_source = data_source, 
                                 sampler_type = sampler_type, 
                                 batch_size = batch_size, 
-                                num_instances = cfg.DATALOADER.TRAIN.NUM_INSTANCES)
+                                num_instances = cfg.DATALOADER.TRAIN.NUM_INSTANCES,
+                                source_domains = source_domains)
         data_loader = DataLoader(
-            dataset = DatasetWrapper(cfg = cfg, data_source = data_source, transform = transform, is_train = is_train, domain_label_offsets = domain_label_offsets), 
+            dataset = DatasetWrapper(cfg = cfg, data_source = data_source, transform = transform, is_train = is_train), 
             batch_size = batch_size, 
             sampler = sampler, 
             num_workers = cfg.DATALOADER.NUM_WORKERS, 
@@ -76,7 +77,7 @@ def build_data_loader(
         )
     else:
         data_loader = DataLoader(
-            dataset = DatasetWrapper(cfg = cfg, data_source = data_source, transform = transform, is_train = is_train, domain_label_offsets = domain_label_offsets), 
+            dataset = DatasetWrapper(cfg = cfg, data_source = data_source, transform = transform, is_train = is_train), 
             batch_size = batch_size, 
             num_workers = cfg.DATALOADER.NUM_WORKERS, 
             collate_fn = test_collate_fn,
@@ -101,12 +102,11 @@ class DataManager:
             batch_size = cfg.DATALOADER.TRAIN.BATCH_SIZE, 
             transform = transform_train, 
             is_train = True,
-            domain_label_offsets = getattr(self.dataset, 'domain_label_offsets', None)
+            source_domains = self.get_source_domains()
         )
 
         self.data_loader_test = build_data_loader(
             cfg = cfg, 
-            sampler_type = cfg.DATALOADER.TEST.SAMPLER, 
             data_source = self.dataset.query_data + self.dataset.gallery_data, 
             batch_size = cfg.DATALOADER.TEST.BATCH_SIZE, 
             transform = transform_test, 
@@ -188,12 +188,11 @@ class DataManager:
 
 
 class DatasetWrapper(Dataset):
-    def __init__(self, cfg, data_source, transform = None, is_train = False, domain_label_offsets = None):
+    def __init__(self, cfg, data_source, transform = None, is_train = False):
         self.cfg = cfg
         self.data_source = data_source
         self.transform = transform
         self.is_train = is_train
-        self.domain_label_offsets = domain_label_offsets or {}
     
     def __len__(self):
         return len(self.data_source)
@@ -202,9 +201,8 @@ class DatasetWrapper(Dataset):
         datum = self.data_source[idx]
 
         output = {
-            "img_path": datum.img_path, 
-            # Remap local id to globally unique id using domain-specific offsets
-            "aid": (datum.aid + self.domain_label_offsets.get(datum.domain_label, 0)), 
+            "img_path": datum.img_path,
+            "aid": datum.aid, 
             "camid": datum.camid, 
             "viewid": datum.viewid, 
             "domain": datum.domain_label 

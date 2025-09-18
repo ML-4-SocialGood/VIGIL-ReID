@@ -80,6 +80,8 @@ class CustomSIGLIP(nn.Module):
         
         # Process each sample individually using its corresponding domain
         mixed_features = torch.zeros_like(base_features)
+
+        print(f"domains: {domains}")
         
         for i, domain_id in enumerate(domains):
             # Get the feature for this specific image
@@ -108,7 +110,7 @@ class CustomSIGLIP(nn.Module):
 
 
 @MODEL_REGISTRY.register()
-class SIGLIPAdapter(Trainer):
+class SIGLIPAdapter_multi(Trainer):
     """
     SIGLIP-Adapter for multi-source domain adaptation
     """

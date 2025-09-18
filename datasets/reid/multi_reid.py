@@ -78,36 +78,41 @@ class MultiReID(DatasetBase):
             print("=> MultiReID loaded")
             self.show_dataset_info()
         
-        # Build static per-domain ID offsets for globally unique labels
-        domain_to_ids = defaultdict(set)
-        for d in self._train_data:
-            # Each "d" is a Datum with fields aid (local id) and domain_label (int)
-            domain_to_ids[d.domain_label].add(d.aid)
-
-        self.domain_label_offsets = {}
-        running_offset = 0
-        for dom in sorted(domain_to_ids.keys()):
-            self.domain_label_offsets[dom] = running_offset
-            running_offset += len(domain_to_ids[dom])
-
-        # Expose the total number of globally unique classes (train-time)
-        self.num_classes = running_offset
-
-        # Build globally unique class names using domain-specific offsets
-        # Each global class id = local aid + offset(domain_label)
-        global_ids = set()
-        for d in self._train_data:
-            global_id = self.domain_label_offsets[d.domain_label] + d.aid
-            global_ids.add(global_id)
+        self.num_classes, self.train_global_ids = self.convert_to_global_id(self.train_data)
+        _, self.test_global_ids = self.convert_to_global_id(self.query_data + self.gallery_data)
 
         # Sorted list for stable indexing/order
-        self.class_names = sorted(global_ids)
+        self.class_names = sorted(self.train_global_ids)
 
 
         # Calculate statistics
         self.num_train_imgs, self.num_train_aids, self.num_train_cams, self.num_train_views = get_dataset_info(self.train_data)
         self.num_gallery_imgs, self.num_gallery_aids, self.num_gallery_cams, self.num_gallery_views = get_dataset_info(self.gallery_data)
         self.num_query_imgs, self.num_query_aids, self.num_query_cams, self.num_query_views = get_dataset_info(self.query_data)
+    
+    def convert_to_global_id(self, dataset):
+        domain_to_ids = defaultdict(set)
+        for d in dataset:
+            # Each "d" is a Datum with fields aid (local id) and domain_label (int)
+            domain_to_ids[d.domain_label].add(d.aid)
+
+        domain_label_offsets = {}
+        running_offset = 0
+        for dom in sorted(domain_to_ids.keys()):
+            domain_label_offsets[dom] = running_offset
+            running_offset += len(domain_to_ids[dom])
+
+        # Expose the total number of globally unique classes (train-time)
+        num_classes = running_offset
+
+        # Build globally unique class names using domain-specific offsets
+        # Each global class id = local aid + offset(domain_label)
+        global_ids = set()
+        for d in dataset:
+            global_id = domain_label_offsets[d.domain_label] + d.aid
+            d.aid = global_id
+            global_ids.add(global_id)
+        return num_classes, global_ids
     
     def _get_domain_label_for_dataset(self, dataset_name):
         """
