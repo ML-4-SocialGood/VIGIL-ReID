@@ -5,8 +5,8 @@ import random
 from collections import defaultdict
 from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
-from RandomIdentitySampler import RandomIdentitySampler
-from MultiDomainRandomIdentitySampler import MultiDomainRandomIdentitySampler
+from .RandomIdentitySampler import RandomIdentitySampler
+from .MultiDomainRandomIdentitySampler import MultiDomainRandomIdentitySampler
 
 
 def build_sampler(data_source, sampler_type, batch_size, num_instances=None, source_domains=None):

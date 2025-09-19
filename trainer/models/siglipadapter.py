@@ -31,22 +31,13 @@ class CustomSIGLIP(nn.Module):
     def __init__(self, cfg, num_classes, siglip_model):
         super().__init__()
         self.cfg = cfg
-        self.image_encoder = siglip_model.vision_model
-        # self.logit_scale = siglip_model.logit_scale
 
-        feature_dim = self.image_encoder.config.hidden_size
-        self.adapter = Adapter(feature_dim, 4)
+        self.siglip_model = siglip_model
+        
+        # Get projected feature dimension from model config
+        proj_dim = siglip_model.config.text_config.projection_size
+        self.adapter = Adapter(proj_dim, 4)
         self.dtype = siglip_model.dtype
-
-        # Use SigLIP's visual projection so our features align with zero-shot
-        self.proj_layer = getattr(siglip_model, "visual_projection", None)
-        if self.proj_layer is None:
-            # Fallback to identity if projection is absent (should not happen for SigLIP)
-            self.proj_layer = nn.Identity()
-            proj_dim = feature_dim
-        else:
-            proj_dim = getattr(self.proj_layer, "out_features", feature_dim)
-
 
         # Classifier operates on projected features
         self.classifier = nn.Linear(proj_dim, num_classes)
@@ -70,9 +61,8 @@ class CustomSIGLIP(nn.Module):
 
     def forward(self, image):
         adapter_ratio = 0.4  
-        image_features = self.image_encoder(image)
-        # Extract the pooled output from the model output
-        image_features = image_features.pooler_output
+        # Get projected image features directly from SigLIP
+        image_features = self.siglip_model.get_image_features(image)
         # Run adapter and mixing in float32 for numerical stability
         base_features = image_features.float()
         adapter_features = self.adapter(base_features)
@@ -80,15 +70,14 @@ class CustomSIGLIP(nn.Module):
             adapter_ratio * adapter_features + (1 - adapter_ratio) * base_features
         )
 
-        # Project to SigLIP's retrieval space and normalize
-        projected = self.proj_layer(mixed_features)
-        projected_norm = torch.nn.functional.normalize(projected, dim=-1, eps=1e-6)
+        # Normalize mixed features for retrieval/metric learning
+        feature_norm = torch.nn.functional.normalize(mixed_features, dim=-1, eps=1e-6)
 
         # Classification uses unnormalized projected features (decoupled from retrieval)
-        cls_scores = self.classifier(projected)
+        cls_scores = self.classifier(mixed_features)
 
         # Return classifier scores and normalized projected features for metric losses/eval
-        return cls_scores, projected_norm
+        return cls_scores, feature_norm
 
 
 @MODEL_REGISTRY.register()

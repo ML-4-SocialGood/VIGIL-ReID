@@ -56,6 +56,10 @@ class Datum:
     def aid(self):
         return self._aid
     
+    @aid.setter
+    def aid(self, value):
+        self._aid = value
+    
     @property
     def camid(self):
         return self._camid

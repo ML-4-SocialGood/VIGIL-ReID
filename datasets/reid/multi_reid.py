@@ -3,9 +3,9 @@ from collections import defaultdict
 
 from datasets.base_dataset import Datum, DatasetBase, get_dataset_info
 from datasets.build_dataset import DATASET_REGISTRY
-from datasets.dg.tiger import Tiger
-from datasets.dg.stoat import Stoat
-from datasets.dg.kiwi import Kiwi
+from datasets.reid.tiger import Tiger
+from datasets.reid.stoat import Stoat
+from datasets.reid.kiwi import Kiwi
 from collections import defaultdict
 from utils import check_availability
 

@@ -20,6 +20,6 @@ class SIGLIPZeroShot(Trainer):
         self.siglip_model = self.siglip_model.to(self.device)
 
     def model_inference(self, input_data):
-        image_features = self.siglip_model.get_image_features(input_data)
+        image_features = self.siglip_model.get_image_features(**{'pixel_values': input_data})
         image_features = torch.nn.functional.normalize(image_features, dim=-1, eps=1e-6)
         return image_features

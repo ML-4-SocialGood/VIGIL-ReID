@@ -2,7 +2,7 @@ from utils import Registry
 
 DATASET_REGISTRY = Registry("DATASET")
 
-from datasets.dg.multi_reid import MultiReID
+from datasets.reid.multi_reid import MultiReID
 
 def build_dataset(cfg):
     """

@@ -102,7 +102,7 @@ class DataManager:
             batch_size = cfg.DATALOADER.TRAIN.BATCH_SIZE, 
             transform = transform_train, 
             is_train = True,
-            source_domains = self.get_source_domains()
+            source_domains = self.get_source_domains
         )
 
         self.data_loader_test = build_data_loader(
@@ -111,7 +111,6 @@ class DataManager:
             batch_size = cfg.DATALOADER.TEST.BATCH_SIZE, 
             transform = transform_test, 
             is_train = False,
-            domain_label_offsets = getattr(self.dataset, 'domain_label_offsets', None)
         )
 
         # Num of animal IDs in the training set. If the same animal ID appears in different datasets, it will be counted multiple times as they come from different domains.
