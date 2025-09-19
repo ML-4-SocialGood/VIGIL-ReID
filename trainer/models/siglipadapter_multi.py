@@ -38,7 +38,7 @@ class CustomSIGLIP(nn.Module):
         self.classifier_dict = nn.ModuleDict()
         for i, domain in enumerate(domains):
             self.adapter_dict[f"adapter_{i}"] = Adapter(proj_dim, 4)
-            self.classifier_dict[f"classifier_{i}"] = nn.Linear(proj_dim, num_classes)
+            self.classifier_dict[f"classifier_{i}"] = nn.Linear(proj_dim, num_classes[i])
         self.dtype = siglip_model.dtype
         self.num_classes = num_classes
 

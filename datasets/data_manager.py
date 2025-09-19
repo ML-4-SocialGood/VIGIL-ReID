@@ -1,3 +1,4 @@
+from collections import defaultdict
 import torch
 import torch.distributed as dist
 
@@ -90,7 +91,23 @@ def build_data_loader(
 
 class DataManager:
     def __init__(self, cfg):
-        self.dataset = build_dataset(cfg)    # initialize multi-domain dataset, each domain is a dataset (eg. Kiwi, Tiger, Stoat)
+        self.datasets = build_dataset(cfg)    # creates a list of datasets
+        self.source_domains = cfg.DATASET.SOURCE_DOMAINS if hasattr(cfg.DATASET, 'SOURCE_DOMAINS') else []
+        self.target_domains = cfg.DATASET.TARGET_DOMAINS if hasattr(cfg.DATASET, 'TARGET_DOMAINS') else []
+
+        self.train_data = []
+        self.gallery_data = []
+        self.query_data = []
+
+        for dataset in self.datasets:
+            self.train_data.extend(dataset.train_data)
+            self.gallery_data.extend(dataset.gallery_data)
+            self.query_data.extend(dataset.query_data)
+
+
+        # convert to global id
+        train_global_ids = self.convert_to_global_id(self.train_data)
+        test_global_ids = self.convert_to_global_id(self.query_data + self.gallery_data)
 
         transform_train = build_transform(cfg, is_train = True)
         transform_test = build_transform(cfg, is_train = False)
@@ -98,7 +115,7 @@ class DataManager:
         self.data_loader_train = build_data_loader(
             cfg = cfg, 
             sampler_type = cfg.DATALOADER.TRAIN.SAMPLER, 
-            data_source = self.dataset.train_data, 
+            data_source = self.train_data, 
             batch_size = cfg.DATALOADER.TRAIN.BATCH_SIZE, 
             transform = transform_train, 
             is_train = True,
@@ -107,43 +124,33 @@ class DataManager:
 
         self.data_loader_test = build_data_loader(
             cfg = cfg, 
-            data_source = self.dataset.query_data + self.dataset.gallery_data, 
+            data_source = self.query_data + self.gallery_data, 
             batch_size = cfg.DATALOADER.TEST.BATCH_SIZE, 
             transform = transform_test, 
             is_train = False,
         )
 
-        # Num of animal IDs in the training set. If the same animal ID appears in different datasets, it will be counted multiple times as they come from different domains.
-        self._num_classes = getattr(self.dataset, 'num_classes', None)
-        self.class_names = getattr(self.dataset, 'class_names', None)
         
-        self.len_query = len(self.dataset.query_data)
+        self.len_query = len(self.query_data)
 
     @property
     def num_classes(self):
-        return self._num_classes
-
-    @property
-    def num_source_domains(self):
-        if hasattr(self.dataset, 'all_domains'):
-            return len(self.dataset.all_domains)
-        return 0
+        num_classes_dict = {}
+        for dataset in self.datasets:
+            num_classes_dict[dataset.domain_label] = dataset.num_train_aids
+        return num_classes_dict
 
     @property
     def get_num_train_images(self):
-        return self.dataset.num_train_imgs
+        return len(self.train_data)
     
     @property
     def get_source_domains(self):
-        return self.dataset.source_domains
+        return self.source_domains
 
     @property
     def get_target_domains(self):
-        return self.dataset.target_domains
-
-    @property
-    def get_num_train_aids(self):
-        return self.dataset.num_train_aids
+        return self.target_domains
     
     @property
     def get_num_train_camids(self):
@@ -184,6 +191,28 @@ class DataManager:
     @property
     def get_num_query_viewids(self):
         return self.dataset.num_query_views
+
+    def convert_to_global_id(self, dataset):
+        domain_to_aids = defaultdict(set)
+        for d in dataset:
+            # Each "d" is a Datum with fields aid (local id) and domain_label (int)
+            domain_to_aids[d.domain_label].add(d.aid)
+
+        domain_label_offsets = {}
+        running_offset = 0
+        for dom in sorted(domain_to_aids.keys()):
+            domain_label_offsets[dom] = running_offset
+            running_offset += len(domain_to_aids[dom])
+
+
+        # Build globally unique class names using domain-specific offsets
+        # Each global class id = local aid + offset(domain_label)
+        global_ids = set()
+        for d in dataset:
+            global_id = domain_label_offsets[d.domain_label] + d.aid
+            d.aid = global_id
+            global_ids.add(global_id)
+        return global_ids
 
 
 class DatasetWrapper(Dataset):
