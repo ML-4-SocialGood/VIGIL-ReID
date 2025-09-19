@@ -27,21 +27,22 @@ class MultiDomainRandomIdentitySampler(Sampler):
 
         for index, datum in enumerate(self.data_source):
             aid = datum.aid
-            domain = datum.domain
-            self.domain_aid_dict[domain][aid].append(index)
+            domain_label = datum.domain_label
+            self.domain_aid_dict[domain_label][aid].append(index)
             self.index_dict[aid].append(index)
         
-        self.aids = {domain: list(self.domain_aid_dict[domain].keys()) for domain in self.domains}
         self.domains = list(self.domain_aid_dict.keys())
+        self.aids = {domain: list(self.domain_aid_dict[domain].keys()) for domain in self.domains}
 
         # Estimate number of samples in an epoch. 
         self.length = 0
-        for aid in self.aids:
-            idxs = self.index_dict[aid]    # a list of indices for a given ID
-            num = len(idxs)
-            if num < self.num_instances:
-                num = self.num_instances
-            self.length += num - num % self.num_instances
+        for domain in self.domains:
+            for aid in self.aids[domain]:
+                idxs = self.domain_aid_dict[domain][aid]    # a list of indices for a given ID
+                num = len(idxs)
+                if num < self.num_instances:
+                    num = self.num_instances
+                self.length += num - num % self.num_instances
         self.length = (self.length // self.batch_size) * self.batch_size    # ensure the length is a multiple of batch size
 
     def __iter__(self):
@@ -65,14 +66,24 @@ class MultiDomainRandomIdentitySampler(Sampler):
         avai_domains = copy.deepcopy(self.domains)    # a list of available domains
         final_idxs = []
 
-        while len(avai_aids) >= self.num_aids_per_batch:
-            selected_domain = random.sample(avai_domains, 1)[0]
+        # Ensure each batch contains samples from only one domain
+        while len(avai_domains) > 0:
+            # Check if any domain has enough AIDs for a batch
+            valid_domains = [d for d in avai_domains if len(avai_aids[d]) >= self.num_aids_per_batch]
+            if not valid_domains:
+                break
+                
+            # Select a random domain that has enough AIDs
+            selected_domain = random.choice(valid_domains)
             selected_aids = random.sample(avai_aids[selected_domain], self.num_aids_per_batch)
+            
             for aid in selected_aids:
                 batch_idxs = batch_idxs_dict[selected_domain][aid].pop(0)
                 final_idxs.extend(batch_idxs)
                 if len(batch_idxs_dict[selected_domain][aid]) == 0:
                     avai_aids[selected_domain].remove(aid)
+            
+            # Remove domain if no more AIDs available
             if len(avai_aids[selected_domain]) == 0:
                 avai_domains.remove(selected_domain)
 

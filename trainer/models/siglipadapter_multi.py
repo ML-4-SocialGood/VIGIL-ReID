@@ -31,27 +31,17 @@ class CustomSIGLIP(nn.Module):
     def __init__(self, cfg, num_classes, siglip_model, domains):
         super().__init__()
         self.cfg = cfg
-        self.image_encoder = siglip_model.vision_model
-        # self.logit_scale = siglip_model.logit_scale
+        self.siglip_model = siglip_model
 
-        feature_dim = self.image_encoder.config.hidden_size
+        proj_dim = siglip_model.config.text_config.projection_size
         self.adapter_dict = nn.ModuleDict()
+        self.classifier_dict = nn.ModuleDict()
         for i, domain in enumerate(domains):
-            self.adapter_dict[f"adapter_{i}"] = Adapter(feature_dim, 4)
+            self.adapter_dict[f"adapter_{i}"] = Adapter(proj_dim, 4)
+            self.classifier_dict[f"classifier_{i}"] = nn.Linear(proj_dim, num_classes)
         self.dtype = siglip_model.dtype
+        self.num_classes = num_classes
 
-        # Use SigLIP's visual projection so our features align with zero-shot
-        self.proj_layer = getattr(siglip_model, "visual_projection", None)
-        if self.proj_layer is None:
-            # Fallback to identity if projection is absent (should not happen for SigLIP)
-            self.proj_layer = nn.Identity()
-            proj_dim = feature_dim
-        else:
-            proj_dim = getattr(self.proj_layer, "out_features", feature_dim)
-
-
-        # Classifier operates on projected features
-        self.classifier = nn.Linear(proj_dim, num_classes)
 
         # not using text features for now
         # prompt_template = PROMPT_TEMPLATES[cfg.DATASET.NAME]
@@ -72,41 +62,37 @@ class CustomSIGLIP(nn.Module):
 
     def forward(self, image, domains):
         adapter_ratio = 0.4  
-        image_features = self.image_encoder(image)
-        # Extract the pooled output from the model output
-        image_features = image_features.pooler_output
-        # Run adapter and mixing in float32 for numerical stability
+        # Get projected image features directly from SigLIP (already projected!)
+        image_features = self.siglip_model.get_image_features(**{'pixel_values': image})
         base_features = image_features.float()
         
         # Process each sample individually using its corresponding domain
         mixed_features = torch.zeros_like(base_features)
-
-        print(f"domains: {domains}")
+        cls_scores = torch.zeros(base_features.size(0), self.num_classes, 
+                                device=base_features.device, dtype=base_features.dtype)
         
         for i, domain_id in enumerate(domains):
             # Get the feature for this specific image
-            feature = base_features[i:i+1]  # Keep batch dimension: [1, hidden_dim]
+            feature = base_features[i:i+1]  # Keep batch dimension: [1, proj_dim]
             
             # Apply the corresponding adapter
             adapter_features = self.adapter_dict[f"adapter_{domain_id}"](feature)
-            
-            # Mix the features
             mixed_feature = (
                 adapter_ratio * adapter_features + (1 - adapter_ratio) * feature
             )
             
-            # Put it back
+            # Put mixed feature back
             mixed_features[i] = mixed_feature.squeeze(0)
+            
+            # Use domain-specific classifier for each sample (no additional projection needed)
+            cls_score = self.classifier_dict[f"classifier_{domain_id}"](mixed_feature)
+            cls_scores[i] = cls_score.squeeze(0)
 
-        # Project to SigLIP's retrieval space and normalize
-        projected = self.proj_layer(mixed_features)
-        projected_norm = torch.nn.functional.normalize(projected, dim=-1, eps=1e-6)
-
-        # Classification uses unnormalized projected features (decoupled from retrieval)
-        cls_scores = self.classifier(projected)
+        # Normalize mixed features for retrieval/metric learning
+        mixed_features_norm = torch.nn.functional.normalize(mixed_features, dim=-1, eps=1e-6)
 
         # Return classifier scores and normalized projected features for metric losses/eval
-        return cls_scores, projected_norm
+        return cls_scores, mixed_features_norm
 
 
 @MODEL_REGISTRY.register()
@@ -129,7 +115,7 @@ class SIGLIPAdapter_multi(Trainer):
 
         print("Turning Off Gradients in Image and Text Encoder")
         for name, param in self.model.named_parameters():
-            if "adapter" not in name and "classifier" not in name:
+            if "adapter_dict" not in name and "classifier_dict" not in name:
                 param.requires_grad_(False)
 
         # Double check
@@ -141,8 +127,8 @@ class SIGLIPAdapter_multi(Trainer):
 
         self.model.to(self.device)
 
-        # NOTE: Give both adapter and classifier to the Optimizer
-        trainable_params = list(self.model.adapter_dict.parameters()) + list(self.model.classifier.parameters())
+        # NOTE: Give both adapter_dict and classifier_dict to the Optimizer
+        trainable_params = list(self.model.adapter_dict.parameters()) + list(self.model.classifier_dict.parameters())
         self.optimizer = build_optimizer(trainable_params, self.cfg.OPTIM)
         self.lr_scheduler = build_lr_scheduler(self.optimizer, self.cfg.OPTIM)
 
@@ -171,3 +157,6 @@ class SIGLIPAdapter_multi(Trainer):
         # LR scheduler now steps once per epoch in Trainer.after_epoch
 
         return loss_summary
+
+    def model_inference(self, batch_data):
+        print("Inferring on the model")
