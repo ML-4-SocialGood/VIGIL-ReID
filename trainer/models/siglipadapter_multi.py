@@ -159,4 +159,6 @@ class SIGLIPAdapter_multi(Trainer):
         return loss_summary
 
     def model_inference(self, batch_data):
-        print("Inferring on the model")
+        image, target, domains = self.parse_batch_test(batch_data)
+        _, feat = self.model(image, domains)
+        return feat
