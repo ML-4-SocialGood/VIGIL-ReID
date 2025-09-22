@@ -47,7 +47,7 @@ def get_cfg_default():
     # Dataset CfgNode
     # ====================
     _C.DATASET = CN()
-    _C.DATASET.ROOT = "/raid/clou785/ReID"
+    _C.DATASET.ROOT = ""
     _C.DATASET.NAME = ""
     _C.DATASET.SOURCE_DOMAINS = []
     _C.DATASET.TARGET_DOMAINS = []
@@ -219,9 +219,9 @@ def get_cfg_default():
 
     # Domain-specific learning rate configurations, default is to use the same learning rate and scheduler for all domains
     _C.OPTIM.DOMAIN_OPTIM = CN()
-    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_LR_MULTIPLIERS = None
-    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_SCHEDULERS = None
-    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_STEP_SIZES = None
+    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_LR_MULTIPLIERS = []
+    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_SCHEDULERS = []
+    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_STEP_SIZES = []
 
     # ====================
     # Train CfgNode
