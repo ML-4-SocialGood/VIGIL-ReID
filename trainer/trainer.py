@@ -29,7 +29,6 @@ class Trainer:
         self.data_loader_train = self.data_manager.data_loader_train
         self.data_loader_test = self.data_manager.data_loader_test
         self.num_classes = self.data_manager.num_classes
-        self.num_source_domains = self.data_manager.num_source_domains
         self.len_query = self.data_manager.len_query
 
         self._models = OrderedDict()
@@ -153,8 +152,16 @@ class Trainer:
                 info = []
                 info += [f"epoch [{self.current_epoch + 1}/{self.max_epoch}]"]
                 info += [f"batch [{self.batch_idx + 1}/{self.num_batches}]"]
+                info += [f"domain {loss_summary['domain']}"]
+                # Include domain_id if provided by the model's forward_backward
+                if 'domain_id' in loss_summary:
+                    info += [f"domain_id {loss_summary['domain_id']}"]
+                    active_model_name = f"siglip_adapter_domain_{loss_summary['domain_id']}"
+                    current_lr = self.get_current_lr(active_model_name)
+                else:
+                    current_lr = self.get_current_lr()
                 info += [f"{losses}"]
-                info += [f"lr {self.get_current_lr():.4e}"]
+                info += [f"lr {current_lr:.4e}"]
                 info += [f"eta {eta}"]
                 print(" ".join(info))
 
@@ -190,7 +197,7 @@ class Trainer:
 
         for _, batch_data in enumerate(data_loader):
             input_data, target, domain = self.parse_batch_test(batch_data)
-            output = self.model_inference(input_data)
+            output = self.model_inference(input_data, domain)
             feats.append(output.cpu())
             aids.append(target.cpu())
 
@@ -240,7 +247,7 @@ class Trainer:
         else:
             return list(self._models.keys())
 
-    def model_inference(self, input_data):
+    def model_inference(self, input_data, domain):
         _, feat = self.model(input_data)
         # Normalize features for evaluation stability
         feat = torch.nn.functional.normalize(feat, dim=-1, eps=1e-6)

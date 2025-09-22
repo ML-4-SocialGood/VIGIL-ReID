@@ -35,7 +35,7 @@ class CLIPZeroShot(Trainer):
                 dim=-1, keepdim=True
             )
 
-    def model_inference(self, image):
+    def model_inference(self, image, domain):
         image_features = self.clip_model.encode_image(image)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         logit_scale = self.clip_model.logit_scale.exp()

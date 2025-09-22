@@ -27,7 +27,7 @@ def build_dataset(cfg):
         check_availability(domain_name, available_datasets)
 
         # Create individual dataset instance
-        dataset = DATASET_REGISTRY.get(domain_name)(cfg, domain_label=index, verbose=False)
+        dataset = DATASET_REGISTRY.get(domain_name)(cfg, domain_label=index, verbose=True)
         list_of_datasets.append(dataset)
 
 

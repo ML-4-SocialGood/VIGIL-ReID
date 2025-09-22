@@ -105,8 +105,9 @@ class DataManager:
             self.query_data.extend(dataset.query_data)
 
 
-        # convert to global id
-        train_global_ids = self.convert_to_global_id(self.train_data)
+        # No need for global ID conversion in multi-domain setup
+        # Each domain uses local IDs since batches contain only one domain
+        # train_global_ids = self.convert_to_global_id(self.train_data)
         test_global_ids = self.convert_to_global_id(self.query_data + self.gallery_data)
 
         transform_train = build_transform(cfg, is_train = True)

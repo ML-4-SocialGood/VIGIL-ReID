@@ -22,7 +22,7 @@ class Kiwi(DatasetBase):
         root = cfg.DATASET.ROOT
         self._dataset_path = os.path.join(root, self._dataset_dir)
         self._domain = "kiwi"
-        self._domain_label = domain_label
+        self.domain_label = domain_label
 
         self.train_dir = os.path.join(self._dataset_path, "train")
         self.gallery_dir = os.path.join(self._dataset_path, "gallery")

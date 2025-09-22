@@ -26,7 +26,7 @@ class Tiger(DatasetBase):
         self._dataset_path = os.path.join(root, self._dataset_dir)
         print("dataset path: ", self._dataset_path)
         self._domain = "tiger" 
-        self._domain_label = domain_label
+        self.domain_label = domain_label
 
         self.train_dir = os.path.join(self._dataset_path, "train")
         self.gallery_dir = os.path.join(self._dataset_path, "gallery")

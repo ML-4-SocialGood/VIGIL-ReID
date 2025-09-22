@@ -47,7 +47,7 @@ def get_cfg_default():
     # Dataset CfgNode
     # ====================
     _C.DATASET = CN()
-    _C.DATASET.ROOT = ""
+    _C.DATASET.ROOT = "/raid/clou785/ReID"
     _C.DATASET.NAME = ""
     _C.DATASET.SOURCE_DOMAINS = []
     _C.DATASET.TARGET_DOMAINS = []
@@ -216,6 +216,12 @@ def get_cfg_default():
     _C.OPTIM.WARMUP_TYPE = "linear"  # Either linear or constant
     _C.OPTIM.WARMUP_CONS_LR = 1e-5  # Constant learning rate when WARMUP_TYPE=constant
     _C.OPTIM.WARMUP_MIN_LR = 1e-5  # Minimum learning rate when WARMUP_TYPE=linear
+
+    # Domain-specific learning rate configurations, default is to use the same learning rate and scheduler for all domains
+    _C.OPTIM.DOMAIN_OPTIM = CN()
+    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_LR_MULTIPLIERS = None
+    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_SCHEDULERS = None
+    _C.OPTIM.DOMAIN_OPTIM.DOMAIN_STEP_SIZES = None
 
     # ====================
     # Train CfgNode

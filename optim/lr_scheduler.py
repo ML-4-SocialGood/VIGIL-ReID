@@ -31,25 +31,31 @@ class ConstantWarmupScheduler(_BaseWarmupScheduler):
         return [self.cons_lr for _ in self.base_lrs]
 
 
-def build_lr_scheduler(optimizer, optim_cfg):
+def build_lr_scheduler(optimizer, optim_cfg, scheduler_type=None, step_size=None):
     """A function wrapper for building a learning rate scheduler.
 
     Args:
         optimizer (Optimizer): an Optimizer.
         optim_cfg (CfgNode): optimization config.
+        scheduler_type (str, optional): Override scheduler type for domain-specific config.
+        step_size (int, optional): Override step size for StepLR scheduler.
     """
+    
+    # Use override parameters if provided (for domain-specific configs)
+    lr_scheduler_type = scheduler_type if scheduler_type is not None else optim_cfg.LR_SCHEDULER
+    step_size_value = step_size if step_size is not None else getattr(optim_cfg, 'STEP_SIZE', 5)
 
-    if optim_cfg.LR_SCHEDULER not in AVAILABLE_LR_SCHEDULERS:
+    if lr_scheduler_type not in AVAILABLE_LR_SCHEDULERS:
         raise ValueError(
             "LR Scheduler must be one of {}, but got {}".format(
-                AVAILABLE_LR_SCHEDULERS, optim_cfg.LR_SCHEDULER
+                AVAILABLE_LR_SCHEDULERS, lr_scheduler_type
             )
         )
 
-    if optim_cfg.LR_SCHEDULER == "Cosine":
+    if lr_scheduler_type == "Cosine":
         scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=optim_cfg.MAX_EPOCH)
-    elif optim_cfg.LR_SCHEDULER == "StepLR":
-        scheduler = StepLR(optimizer=optimizer, step_size=optim_cfg.STEP_SIZE)
+    elif lr_scheduler_type == "StepLR":
+        scheduler = StepLR(optimizer=optimizer, step_size=step_size_value)
 
     if optim_cfg.WARMUP_TYPE == "constant":
         scheduler = ConstantWarmupScheduler(

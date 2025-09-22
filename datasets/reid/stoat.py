@@ -21,7 +21,7 @@ class Stoat(DatasetBase):
         self._dataset_dir = "Stoat"
         root = cfg.DATASET.ROOT
         self._dataset_path = os.path.join(root, self._dataset_dir)
-        self._domain_label = domain_label
+        self.domain_label = domain_label
         self._domain = "stoat"
 
         self.train_dir = os.path.join(self._dataset_path, "train")

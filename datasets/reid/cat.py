@@ -15,7 +15,7 @@ class Cat(DatasetBase):
         self._dataset_path = os.path.join(root, self._dataset_dir)
         print("dataset path: ", self._dataset_path)
         self._domain = "cat" 
-        self._domain_label = domain_label
+        self.domain_label = domain_label
 
         self.train_dir = os.path.join(self._dataset_path, "train")
         self.gallery_dir = os.path.join(self._dataset_path, "gallery")
@@ -87,7 +87,7 @@ class Cat(DatasetBase):
                 aid = aid, 
                 camid = camid, 
                 viewid = -1,
-                domain_label = self._domain_label  # Store domain label based on MultiReID assignment
+                domain_label = self.domain_label  # Store domain label based on MultiReID assignment
             )
             img_datums.append(img_datum)
 

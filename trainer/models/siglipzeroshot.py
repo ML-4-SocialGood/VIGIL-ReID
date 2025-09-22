@@ -19,7 +19,7 @@ class SIGLIPZeroShot(Trainer):
         # Move model to the appropriate device (GPU if available)
         self.siglip_model = self.siglip_model.to(self.device)
 
-    def model_inference(self, input_data):
+    def model_inference(self, input_data, domain):
         image_features = self.siglip_model.get_image_features(**{'pixel_values': input_data})
         image_features = torch.nn.functional.normalize(image_features, dim=-1, eps=1e-6)
         return image_features

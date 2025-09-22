@@ -68,6 +68,8 @@ class MetricMeter:
         for key, value in input_dict.items():
             if isinstance(value, torch.Tensor):
                 value = value.item()
+            if key in ["domain", "domain_id"]:
+                continue
             self.meters[key].update(value)
 
     def __str__(self):
