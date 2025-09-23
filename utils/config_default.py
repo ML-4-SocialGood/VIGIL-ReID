@@ -239,8 +239,11 @@ def get_cfg_default():
     # Test CfgNode
     # ====================
     _C.TEST = CN()
-    _C.TEST.EVALUATOR = "ReID"
+    _C.TEST.EVALUATOR = "R1_mAP"
     _C.TEST.SPLIT = "Test"
     _C.TEST.FINAL_Model = "last_step"
+    # If true, restrict each query to compare only with gallery samples
+    # from the same domain (uses domain labels collected from dataloader)
+    _C.TEST.SAME_DOMAIN_GALLERY = False
 
     return _C

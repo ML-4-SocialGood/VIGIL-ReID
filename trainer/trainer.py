@@ -192,20 +192,13 @@ class Trainer:
 
         print("Evaluate on the {} Set".format(split))
 
-        feats = []
-        aids = []
-
         for _, batch_data in enumerate(data_loader):
-            input_data, target, domain = self.parse_batch_test(batch_data)
+            input_data, target, domain, camids = self.parse_batch_test(batch_data)
             output = self.model_inference(input_data, domain)
-            feats.append(output.cpu())
-            aids.append(target.cpu())
+            self.evaluator.process((output.cpu(), target.cpu().tolist(), camids, domain))
+        results = self.evaluator.evaluate()
 
-        feats = torch.cat(feats, dim=0)
-        aids = torch.cat(aids, dim=0)
-        rank1, mAP = self.evaluator.process(feats, aids)
-
-        return rank1, mAP
+        return results
 
     def parse_batch_train(self, batch_data):
         image = batch_data["imgs"].to(self.device)
@@ -218,7 +211,8 @@ class Trainer:
         input_data = batch_data["imgs"].to(self.device)
         target = batch_data["aids"].to(self.device)
         domain = batch_data["domains"]
-        return input_data, target, domain
+        camids = batch_data["camids"]
+        return input_data, target, domain, camids
 
     def forward_backward(self, batch_data):
         raise NotImplementedError

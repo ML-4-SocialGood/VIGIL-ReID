@@ -98,7 +98,7 @@ class Stoat(DatasetBase):
                 aid = aid, 
                 camid = camid, 
                 viewid = -1,
-                domain_label = self._domain_label  # Store domain label based on MultiReID assignment
+                domain_label = self.domain_label  # Store domain label based on MultiReID assignment
             )
             img_datums.append(img_datum)
 

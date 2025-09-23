@@ -2,28 +2,26 @@ from utils import Registry, check_availability
 
 DATASET_REGISTRY = Registry("DATASET")
 
-from datasets.reid.multi_reid import MultiReID
 
 def build_dataset(cfg):
     """
         Builds a list of datasets, each corresponding to a domain.
     """
     available_datasets = DATASET_REGISTRY.registered_names()
-        
-    # Combine all domains
-    all_domains = set()
-    if hasattr(cfg.DATASET, 'SOURCE_DOMAINS'):
-        all_domains.update(cfg.DATASET.SOURCE_DOMAINS)
-    else:
-        raise ValueError("SOURCE_DOMAINS is not set in the config")
-    if hasattr(cfg.DATASET, 'TARGET_DOMAINS'):
-        all_domains.update(cfg.DATASET.TARGET_DOMAINS)
-    else:
-        raise ValueError("TARGET_DOMAINS is not set in the config")
 
-    all_domains = list(all_domains)
+    source_domains = cfg.DATASET.SOURCE_DOMAINS
+    target_domains = cfg.DATASET.TARGET_DOMAINS
+
+    if not source_domains or not target_domains:
+        raise ValueError("Source and target domains are required")
+        
+    for domain in target_domains:
+        if domain not in source_domains:
+            raise ValueError(f"Domain {domain} is not in the source domains")
+
     list_of_datasets = []
-    for index, domain_name in enumerate(all_domains):
+    # build target domains which is a subset of source domains
+    for index, domain_name in enumerate(target_domains):
         check_availability(domain_name, available_datasets)
 
         # Create individual dataset instance
