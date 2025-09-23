@@ -28,19 +28,21 @@ class Adapter(nn.Module):
 
 
 class CustomSIGLIP(nn.Module):
-    def __init__(self, cfg, num_classes, siglip_model):
+    def __init__(self, cfg, num_classes, siglip_model, domains):
         super().__init__()
         self.cfg = cfg
-
         self.siglip_model = siglip_model
-        
-        # Get projected feature dimension from model config
-        proj_dim = siglip_model.config.text_config.projection_size
-        self.adapter = Adapter(proj_dim, 4)
-        self.dtype = siglip_model.dtype
 
-        # Classifier operates on projected features
-        self.classifier = nn.Linear(proj_dim, num_classes)
+        proj_dim = siglip_model.config.text_config.projection_size
+        self.adapter_dict = nn.ModuleDict()
+        self.classifier_dict = nn.ModuleDict()
+        for i, domain in enumerate(domains):
+            self.adapter_dict[f"adapter_{i}"] = Adapter(proj_dim, 4)
+            self.classifier_dict[f"classifier_{i}"] = nn.Linear(proj_dim, num_classes[i])
+        self.dtype = siglip_model.dtype
+        self.num_classes = num_classes
+        self.domains = domains
+
 
         # not using text features for now
         # prompt_template = PROMPT_TEMPLATES[cfg.DATASET.NAME]
@@ -59,30 +61,68 @@ class CustomSIGLIP(nn.Module):
         #     text_features = text_features / text_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
         #     self.text_features = text_features
 
-    def forward(self, image):
+    def forward(self, image, domains):
         adapter_ratio = 0.4  
-        # Get projected image features directly from SigLIP
-        image_features = self.siglip_model.get_image_features(image)
-        # Run adapter and mixing in float32 for numerical stability
+        # Get projected image features directly from SigLIP (already projected!)
+        image_features = self.siglip_model.get_image_features(**{'pixel_values': image})
         base_features = image_features.float()
-        adapter_features = self.adapter(base_features)
-        mixed_features = (
-            adapter_ratio * adapter_features + (1 - adapter_ratio) * base_features
-        )
+
+        # Check if all samples in batch have the same domain (training case)
+        unique_domains = list(set(domains))
+        single_domain_batch = len(unique_domains) == 1
+        
+        mixed_features = torch.zeros_like(base_features)
+        
+        if single_domain_batch:
+            # Training case: all samples have same domain, can use unified tensor
+            domain = domains[0]
+            cls_scores = torch.zeros(base_features.size(0), self.num_classes[domain], 
+                                    device=base_features.device, dtype=base_features.dtype)
+            
+            for i, domain_id in enumerate(domains):
+                # Get the feature for this specific image
+                feature = base_features[i:i+1]  # Keep batch dimension: [1, proj_dim]
+                
+                # Apply the corresponding adapter
+                adapter_features = self.adapter_dict[f"adapter_{domain_id}"](feature)
+                mixed_feature = (
+                    adapter_ratio * adapter_features + (1 - adapter_ratio) * feature
+                )
+                
+                # Put mixed feature back
+                mixed_features[i] = mixed_feature.squeeze(0)
+                
+                # Use domain-specific classifier for each sample
+                cls_score = self.classifier_dict[f"classifier_{domain_id}"](mixed_feature)
+                cls_scores[i] = cls_score.squeeze(0)
+        else:
+            # Inference: doesn't use classifier
+            cls_scores = None
+            for i, domain_id in enumerate(domains):
+                # Get the feature for this specific image
+                feature = base_features[i:i+1]  # Keep batch dimension: [1, proj_dim]
+                
+                # Apply the corresponding adapter
+                adapter_features = self.adapter_dict[f"adapter_{domain_id}"](feature)
+                mixed_feature = (
+                    adapter_ratio * adapter_features + (1 - adapter_ratio) * feature
+                )
+                
+                # Put mixed feature back
+                mixed_features[i] = mixed_feature.squeeze(0)
+                
 
         # Normalize mixed features for retrieval/metric learning
-        feature_norm = torch.nn.functional.normalize(mixed_features, dim=-1, eps=1e-6)
-
-        # Classification uses unnormalized projected features (decoupled from retrieval)
-        cls_scores = self.classifier(mixed_features)
+        mixed_features_norm = torch.nn.functional.normalize(mixed_features, dim=-1, eps=1e-6)
 
         # Return classifier scores and normalized projected features for metric losses/eval
-        return cls_scores, feature_norm
+        return cls_scores, mixed_features_norm
 
 
 @MODEL_REGISTRY.register()
 class SIGLIPAdapter(Trainer):
-    """SIGLIP-Adapter
+    """
+    SIGLIP-Adapter for multi-source domain adaptation
     """
 
     def build_model(self):
@@ -94,12 +134,12 @@ class SIGLIPAdapter(Trainer):
 
         print("Building Custom SIGLIP")
         self.model = CustomSIGLIP(
-            self.cfg, self.data_manager.dataset.num_classes, siglip_model
+            self.cfg, self.data_manager.num_classes, siglip_model, self.data_manager.get_target_domains
         )
 
         print("Turning Off Gradients in Image and Text Encoder")
         for name, param in self.model.named_parameters():
-            if "adapter" not in name and "classifier" not in name:
+            if "adapter_dict" not in name and "classifier_dict" not in name:
                 param.requires_grad_(False)
 
         # Double check
@@ -111,27 +151,63 @@ class SIGLIPAdapter(Trainer):
 
         self.model.to(self.device)
 
-        # NOTE: Give both adapter and classifier to the Optimizer
-        trainable_params = list(self.model.adapter.parameters()) + list(self.model.classifier.parameters())
-        self.optimizer = build_optimizer(trainable_params, self.cfg.OPTIM)
-        self.lr_scheduler = build_lr_scheduler(self.optimizer, self.cfg.OPTIM)
-
-        self.model_registeration(
-            "siglip_adapter",
-            self.model,  # Register the full model
-            self.optimizer,
-            self.lr_scheduler,
-        )
+        # Create domain-specific optimizers and schedulers
+        self.domain_optimizers = {}
+        self.domain_schedulers = {}
+        
+        # use target domains which is a subset of source domains
+        for domain_id, domain_name in enumerate(self.data_manager.get_target_domains):
+            # Get domain-specific parameters (adapter + classifier for this domain)
+            domain_params = []
+            domain_params.extend(list(self.model.adapter_dict[f"adapter_{domain_id}"].parameters()))
+            domain_params.extend(list(self.model.classifier_dict[f"classifier_{domain_id}"].parameters()))
+            
+            # Get domain-specific learning rate multiplier if available
+            lr_multiplier = 1.0
+            if hasattr(self.cfg.OPTIM, 'DOMAIN_OPTIM') and hasattr(self.cfg.OPTIM.DOMAIN_OPTIM, 'DOMAIN_LR_MULTIPLIERS'):
+                multipliers = self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_LR_MULTIPLIERS
+                if isinstance(multipliers, (list, tuple)) and len(multipliers) > domain_id:
+                    lr_multiplier = multipliers[domain_id]
+            
+            # Create domain-specific optimizer with custom learning rate
+            domain_optimizer = build_optimizer(domain_params, self.cfg.OPTIM, lr_multiplier=lr_multiplier)
+            self.domain_optimizers[domain_id] = domain_optimizer
+            
+            # Create domain-specific scheduler with custom config if available
+            domain_scheduler = self._build_domain_scheduler(domain_optimizer, domain_id)
+            self.domain_schedulers[domain_id] = domain_scheduler
+            
+            # Register each domain optimizer and scheduler
+            self.model_registeration(
+                f"siglip_adapter_domain_{domain_id}",
+                self.model,
+                domain_optimizer,
+                domain_scheduler,
+            )
+            
+            # Print domain-specific configuration info
+            scheduler_type = "default"
+            if (hasattr(self.cfg.OPTIM, 'DOMAIN_OPTIM') and
+                hasattr(self.cfg.OPTIM.DOMAIN_OPTIM, 'DOMAIN_SCHEDULERS') and
+                len(self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_SCHEDULERS) > domain_id):
+                scheduler_type = self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_SCHEDULERS[domain_id]
+            print(f"Domain {domain_id}: LR base={self.cfg.OPTIM.LR:.6f}, mult={lr_multiplier:.3f}, Scheduler={scheduler_type}")
+            
 
     def forward_backward(self, batch_data):
-        image, target, domain = self.parse_batch_train(batch_data)
-        output, feat = self.model(image)
-        loss_func, center_criterion = make_loss(self.cfg, self.num_classes, self.device)
+        image, target, domains = self.parse_batch_train(batch_data)
+        # all samples in the batch have the same domain
+        domain = domains[0]
+        output, feat = self.model(image, domains)
+        loss_func, center_criterion = make_loss(self.cfg, self.num_classes[domain], self.device)
         loss, ID_LOSS, TRI_LOSS = loss_func(output, feat, target, None)
 
-        self.model_backward_and_update(loss)
+        # Use domain-specific optimizer for backward and update
+        self.model_backward_and_update(loss, f"siglip_adapter_domain_{domain}")
 
         loss_summary = {
+            "domain": self.data_manager.get_source_domains[domain],
+            "domain_id": domain,
             "loss": loss.item(),
             "ID_LOSS": ID_LOSS,
             "TRI_LOSS": TRI_LOSS,
@@ -141,3 +217,29 @@ class SIGLIPAdapter(Trainer):
         # LR scheduler now steps once per epoch in Trainer.after_epoch
 
         return loss_summary
+
+    def model_inference(self, batch_data, domains):
+        _, feat = self.model(batch_data, domains)
+        return feat
+    
+    def _build_domain_scheduler(self, optimizer, domain_id):
+        """Build domain-specific learning rate scheduler with custom config if available."""
+        # Check if domain-specific scheduler config exists
+        if hasattr(self.cfg.OPTIM, 'DOMAIN_OPTIM') and hasattr(self.cfg.OPTIM.DOMAIN_OPTIM, 'DOMAIN_SCHEDULERS'):
+            domain_schedulers = self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_SCHEDULERS
+            if isinstance(domain_schedulers, (list, tuple)) and len(domain_schedulers) > domain_id:
+                scheduler_type = domain_schedulers[domain_id]
+                
+                # Get domain-specific step size if using StepLR
+                step_size = None
+                if (scheduler_type == "StepLR" and 
+                    hasattr(self.cfg.OPTIM.DOMAIN_OPTIM, 'DOMAIN_STEP_SIZES') and
+                    isinstance(self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_STEP_SIZES, (list, tuple)) and
+                    len(self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_STEP_SIZES) > domain_id):
+                    step_size = self.cfg.OPTIM.DOMAIN_OPTIM.DOMAIN_STEP_SIZES[domain_id]
+                
+                return build_lr_scheduler(optimizer, self.cfg.OPTIM, 
+                                        scheduler_type=scheduler_type, step_size=step_size)
+        
+        # Fall back to default scheduler
+        return build_lr_scheduler(optimizer, self.cfg.OPTIM)

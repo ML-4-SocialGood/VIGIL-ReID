@@ -1,7 +1,7 @@
 DATALOADER:
   TRAIN:
-    BATCH_SIZE: 32
-    NUM_INSTANCES: 4
+    BATCH_SIZE: 36
+    NUM_INSTANCES: 6
     SAMPLER: "RandomIdentitySampler"
   TEST:
     BATCH_SIZE: 64
@@ -15,13 +15,23 @@ INPUT:
   TRANSFORMS: ["random_resized_crop", "random_flip", "normalize"]
 
 OPTIM:
-  NAME: "adamw"  # Changed from sgd for smoother adapter training
-  LR: 0.0005  # Reduced from 0.002 for more stable adapter training
-  MAX_EPOCH: 100  # Increased from 50 for better convergence
+  NAME: "adamw"  
+  LR: 0.001
+  MAX_EPOCH: 1
   LR_SCHEDULER: "Cosine"
-  WARMUP_EPOCH: 1
+  WARMUP_EPOCH: 0
   WARMUP_TYPE: "constant"
   WARMUP_CONS_LR: 1e-5
+  WEIGHT_DECAY: 0.01
+
+  # Domain-specific learning rate configurations (optional, fallback to above settings)
+  DOMAIN_OPTIM:
+    # Different learning rates for different domains 
+    DOMAIN_LR_MULTIPLIERS: [1.0, 1.5] 
+    
+    # Different schedulers for different domains
+    DOMAIN_SCHEDULERS: ["Cosine", "Cosine"]     
+
 
 TRAIN:
   PRINT_FREQ: 5
@@ -29,12 +39,12 @@ TRAIN:
 MODEL:
   NAME: SIGLIPAdapter
   METRIC_LOSS_TYPE: "triplet"
-  NO_MARGIN: True
+  NO_MARGIN: False
   IF_LABELSMOOTH: "on"
   ID_LOSS_WEIGHT: 1.0
-  TRIPLET_LOSS_WEIGHT: 2.0  # Higher for better metric learning
+  TRIPLET_LOSS_WEIGHT: 4.0  
   SIGLIPAdapter:
     CKPT: "google/siglip-so400m-patch14-384"
 
 SOLVER:
-  MARGIN: 0.1
+  MARGIN: 0.3
