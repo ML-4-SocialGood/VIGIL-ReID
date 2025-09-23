@@ -1,1 +1,1 @@
-from .accuracy import compute_accuracy  # noqa
+from .accuracy import compute_accuracy
