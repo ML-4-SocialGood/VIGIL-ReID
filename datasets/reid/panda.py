@@ -8,15 +8,21 @@ from utils.tools import listdir_nonhidden
 
 
 @DATASET_REGISTRY.register()
-class Kiwi(DatasetBase):
+class Panda(DatasetBase):
     """
+    IPanda50
+    Reference: L. Wang et al., "Giant Panda Identification," in IEEE Transactions on Image Processing, vol. 30, pp. 2837-2849, 2021, doi: 10.1109/TIP.2021.3055627
 
+    Dataset statistics:
+        - images: 5620 (train) + 677 (gallery) + 577 (query)
+        - identities: 50 (train) + 10 (gallery) + 10 (query)
     """
     def __init__(self, cfg, domain_label, verbose = True):
-        self._dataset_dir = "Kiwi"
+        self._dataset_dir = "IPanda50"
         root = cfg.DATASET.ROOT
         self._dataset_path = os.path.join(root, self._dataset_dir)
-        self._domain = "kiwi"
+        print("dataset path: ", self._dataset_path)
+        self._domain = "panda" 
         self.domain_label = domain_label
 
         self.train_dir = os.path.join(self._dataset_path, "train")
@@ -33,16 +39,12 @@ class Kiwi(DatasetBase):
             train_data = train_data, 
             gallery_data = gallery_data, 
             query_data = query_data,
-            domain=self._domain
+            domain = self._domain 
         )
 
         if verbose:
             print(f"=> {self._domain} loaded")
             self.show_dataset_info()
-
-        self.train_data = train_data
-        self.gallery_data = gallery_data
-        self.query_data = query_data
 
         self.num_train_imgs, self.num_train_aids, self.num_train_cams, self.num_train_views = get_dataset_info(self.train_data)
         self.num_gallery_imgs, self.num_gallery_aids, self.num_gallery_cams, self.num_gallery_views = get_dataset_info(self.gallery_data)
@@ -88,7 +90,13 @@ class Kiwi(DatasetBase):
             if relabel:
                 aid = aid2label[aid]
             
-            img_datum = Datum(img_path = img_p, aid = aid, camid = camid, viewid = -1, domain_label=self.domain_label)  # Store domain label based on MultiReID assignment
+            img_datum = Datum(
+                img_path = img_p, 
+                aid = aid, 
+                camid = camid, 
+                viewid = -1,
+                domain_label = self.domain_label  # Store domain label based on MultiReID assignment
+            )
             img_datums.append(img_datum)
 
         return img_datums

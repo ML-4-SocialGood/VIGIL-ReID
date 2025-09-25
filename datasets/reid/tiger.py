@@ -21,7 +21,7 @@ class Tiger(DatasetBase):
         - IDs: 149 (train) + 33 (gallery) + 33 (query)
     """
     def __init__(self, cfg, domain_label, verbose = True):
-        self._dataset_dir = "Tiger"
+        self._dataset_dir = "ATRW"
         root = cfg.DATASET.ROOT
         self._dataset_path = os.path.join(root, self._dataset_dir)
         print("dataset path: ", self._dataset_path)
@@ -98,7 +98,7 @@ class Tiger(DatasetBase):
                 aid = aid, 
                 camid = camid, 
                 viewid = -1,
-                domain_label = self._domain_label  # Store domain label based on MultiReID assignment
+                domain_label = self.domain_label  # Store domain label based on MultiReID assignment
             )
             img_datums.append(img_datum)
 

@@ -6,17 +6,26 @@ from datasets.base_dataset import Datum, DatasetBase, get_dataset_info
 from datasets.build_dataset import DATASET_REGISTRY
 from utils.tools import listdir_nonhidden
 
-
+# filename format not consistent with others
 @DATASET_REGISTRY.register()
-class Kiwi(DatasetBase):
+class Dog(DatasetBase):
     """
-
+    MPDD
+    Reference:
+       He, Zhimin (2023), “Multi-pose dog dataset”, Mendeley Data, V1, doi: 10.17632/v5j6m8dzhv.1
+    URL:
+        https://data.mendeley.com/datasets/v5j6m8dzhv/1
+    
+    Dataset statistics:
+        - images: 1032 (train) + 103 (gallery) + 521 (query)
+        - IDs: 95 (train) + 96 (gallery) + 96 (query)
     """
     def __init__(self, cfg, domain_label, verbose = True):
-        self._dataset_dir = "Kiwi"
+        self._dataset_dir = "MPDD"
         root = cfg.DATASET.ROOT
         self._dataset_path = os.path.join(root, self._dataset_dir)
-        self._domain = "kiwi"
+        print("dataset path: ", self._dataset_path)
+        self._domain = "dog" 
         self.domain_label = domain_label
 
         self.train_dir = os.path.join(self._dataset_path, "train")
@@ -33,16 +42,12 @@ class Kiwi(DatasetBase):
             train_data = train_data, 
             gallery_data = gallery_data, 
             query_data = query_data,
-            domain=self._domain
+            domain = self._domain 
         )
 
         if verbose:
             print(f"=> {self._domain} loaded")
             self.show_dataset_info()
-
-        self.train_data = train_data
-        self.gallery_data = gallery_data
-        self.query_data = query_data
 
         self.num_train_imgs, self.num_train_aids, self.num_train_cams, self.num_train_views = get_dataset_info(self.train_data)
         self.num_gallery_imgs, self.num_gallery_aids, self.num_gallery_cams, self.num_gallery_views = get_dataset_info(self.gallery_data)
@@ -88,7 +93,13 @@ class Kiwi(DatasetBase):
             if relabel:
                 aid = aid2label[aid]
             
-            img_datum = Datum(img_path = img_p, aid = aid, camid = camid, viewid = -1, domain_label=self.domain_label)  # Store domain label based on MultiReID assignment
+            img_datum = Datum(
+                img_path = img_p, 
+                aid = aid, 
+                camid = camid, 
+                viewid = -1,
+                domain_label = self.domain_label  # Store domain label based on MultiReID assignment
+            )
             img_datums.append(img_datum)
 
         return img_datums
