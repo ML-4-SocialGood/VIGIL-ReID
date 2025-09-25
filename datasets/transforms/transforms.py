@@ -6,6 +6,8 @@ from torchvision.transforms import (
     RandomHorizontalFlip,
     RandomResizedCrop,
     Resize,
+    RandomErasing,
+    ColorJitter,
     ToTensor,
 )
 
@@ -43,11 +45,28 @@ def _build_transform_train(cfg, transform_choices):
     if "random_flip" in transform_choices:
         transform_train += [RandomHorizontalFlip()]
 
+    if "color_jitter" in transform_choices:
+        transform_train += [
+            ColorJitter(
+                brightness=0.4,
+                contrast=0.4,
+                saturation=0.4,
+                hue=0.1,
+            )
+        ]
+    
+    # Convert to tensor before any tensor-only transforms
     transform_train += [ToTensor()]
 
     if "normalize" in transform_choices:
         transform_train += [
             Normalize(mean=cfg.INPUT.PIXEL_MEAN, std=cfg.INPUT.PIXEL_STD)
+        ]
+
+    # RandomErasing expects a tensor image; apply after ToTensor/Normalize
+    if "random_erase" in transform_choices:
+        transform_train += [
+            RandomErasing()
         ]
 
     transform_train = Compose(transform_train)

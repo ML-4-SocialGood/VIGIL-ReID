@@ -16,10 +16,10 @@ class Adapter(nn.Module):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(channel_in, channel_in // reduction, bias=False),
-            nn.GELU(),  # Changed from ReLU to GELU for better gradient flow
+            nn.ReLU(),  
             nn.Dropout(0.5),
             nn.Linear(channel_in // reduction, channel_in, bias=False),
-            nn.GELU(),  # Changed from ReLU to GELU
+            nn.ReLU(),  
         )
 
     def forward(self, x):
@@ -42,24 +42,6 @@ class CustomSIGLIP(nn.Module):
         self.dtype = siglip_model.dtype
         self.num_classes = num_classes
         self.domains = domains
-
-
-        # not using text features for now
-        # prompt_template = PROMPT_TEMPLATES[cfg.DATASET.NAME]
-        # prompts = [
-        #     # currently using animal ID directly in the prompt
-        #     prompt_template.format(str(class_name).replace("_", " "))
-        #     for class_name in class_names
-        # ]
-        # prompts = torch.cat([siglip_model.tokenize(prompt) for prompt in prompts])
-        # prompts = prompts.to(torch.cuda.current_device())
-
-        # with torch.no_grad():
-        #     text_features = siglip_model.encode_text(prompts)
-        #     # Normalize with epsilon and keep computations in float32 for stability
-        #     text_features = text_features.float()
-        #     text_features = text_features / text_features.norm(dim=-1, keepdim=True).clamp(min=1e-6)
-        #     self.text_features = text_features
 
     def forward(self, image, domains):
         adapter_ratio = 0.4  
