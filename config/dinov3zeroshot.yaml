@@ -1,0 +1,38 @@
+DATALOADER:
+  TRAIN:
+    BATCH_SIZE: 16
+    NUM_INSTANCES: 4
+    SAMPLER: "RandomIdentitySampler"
+  TEST:
+    BATCH_SIZE: 64
+  NUM_WORKERS: 8
+
+INPUT:
+  SIZE: (256, 256)
+  INTERPOLATION: "bicubic"
+  PIXEL_MEAN: [0.485, 0.456, 0.406]
+  PIXEL_STD: [0.229, 0.224, 0.225]
+  TRANSFORMS: ["random_resized_crop", "random_flip", "normalize"]
+
+OPTIM:
+  NAME: "sgd"
+  LR: 0.002
+  MAX_EPOCH: 200
+  LR_SCHEDULER: "cosine"
+  WARMUP_EPOCH: 1
+  WARMUP_TYPE: "constant"
+  WARMUP_CONS_LR: 1e-5
+
+TRAIN:
+  PRINT_FREQ: 5
+
+MODEL:
+  NAME: DinoV3ZeroShot
+  METRIC_LOSS_TYPE: "triplet"
+  NO_MARGIN: False
+  IF_LABELSMOOTH: "on"
+  DinoV3ZeroShot:
+    WEIGHT_PATH: "/raid/clou785/ReID/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
+    BACKBONE: "dinov3_vit7b16"
+    REPO: "/home/clou785/VIGIL-ReID/trainer/models/dinov3"
+

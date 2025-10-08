@@ -99,6 +99,12 @@ def get_cfg_default():
     _C.MODEL.CLIPLinearProbe = CN()
     _C.MODEL.CLIPLinearProbe.BACKBONE = "ViT-B/32"
 
+    # DINOV3ZeroShot
+    _C.MODEL.DinoV3ZeroShot = CN()
+    _C.MODEL.DinoV3ZeroShot.WEIGHT_PATH = ""
+    _C.MODEL.DinoV3ZeroShot.BACKBONE = "dinov3_vitb16"
+    _C.MODEL.DinoV3ZeroShot.REPO = ""
+
     # CoOp
     _C.MODEL.CoOp = CN()
     _C.MODEL.CoOp.BACKBONE = "ViT-B/32"
@@ -120,6 +126,12 @@ def get_cfg_default():
     # SIGLIPAdapter
     _C.MODEL.SIGLIPAdapter = CN()
     _C.MODEL.SIGLIPAdapter.CKPT = "google/siglip-so400m-patch14-384"
+
+    # SIGLIPAdapterInference
+    _C.MODEL.SIGLIPAdapterInference = CN()
+    _C.MODEL.SIGLIPAdapterInference.CKPT = "google/siglip-so400m-patch14-384"
+    _C.MODEL.SIGLIPAdapterInference.ADAPTER_WEIGHTS = ""
+    _C.MODEL.SIGLIPAdapterInference.ADAPTER_RATIO = 0.4
 
     # RISE
     _C.MODEL.RISE = CN()
