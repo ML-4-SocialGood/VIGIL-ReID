@@ -10,34 +10,13 @@ from utils import PROMPT_TEMPLATES
 @MODEL_REGISTRY.register()
 class CLIPZeroShot(Trainer):
     def build_model(self):
-        class_names = self.data_manager.dataset.class_names
-        domain_names = self.data_manager.dataset.source_domains
-
-
         self.clip_model, _ = clip.load(
             self.cfg.MODEL.CLIPZeroShot.BACKBONE,
             device=self.device,
             download_root=os.path.abspath(os.path.expanduser("data")),
         )
-        prompt_template = PROMPT_TEMPLATES[self.cfg.DATASET.NAME]
-        prompts = [
-            # currently using first source domain and animal id directly in the prompt
-            prompt_template.format((domain_names[0] + str(class_name)).replace("_", " "))
-            for class_name in class_names
-        ]
-        # print(f"Prompts: {prompts}")
-        prompts = torch.cat([clip.tokenize(prompt) for prompt in prompts])
-        prompts = prompts.to(self.device)
-
-        with torch.no_grad():
-            self.text_features = self.clip_model.encode_text(prompts)
-            self.text_features = self.text_features / self.text_features.norm(
-                dim=-1, keepdim=True
-            )
 
     def model_inference(self, image, domain):
         image_features = self.clip_model.encode_image(image)
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-        logit_scale = self.clip_model.logit_scale.exp()
-        logits = logit_scale * image_features @ self.text_features.t()
+        image_features = torch.nn.functional.normalize(image_features, dim=-1, eps=1e-6)
         return image_features

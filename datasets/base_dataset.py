@@ -3,14 +3,21 @@ import os
 import zipfile
 from collections import Counter
 from tabulate import tabulate
-
+from utils.color_check import check_color_diff
 
 def get_dataset_info(dataset):
     aids_list, camids_list, viewids_list = [], [], []
+    num_day = 0
+    num_night = 0
     for entry in dataset:
         aids_list.append(entry.aid)
         camids_list.append(entry.camid)
         viewids_list.append(entry.viewid)
+        if entry.is_day == 1:
+            num_day += 1
+        elif entry.is_day == 0:
+            num_night += 1
+
 
     aids = set(aids_list)
     camids = set(camids_list)
@@ -20,7 +27,7 @@ def get_dataset_info(dataset):
     num_of_aids = len(aids) # num of classes for animal ReID
     num_of_camids = len(camids)
     num_of_viewids = len(viewids)
-    return num_of_images, num_of_aids, num_of_camids, num_of_viewids
+    return num_of_images, num_of_aids, num_of_camids, num_of_viewids, num_day, num_night
 
 
 class Datum:
@@ -71,7 +78,21 @@ class Datum:
     @property
     def domain_label(self):
         return self._domain_label
+    
+    # 1 for day, 0 for night
+    @property
+    def is_day(self):
+        return 1 if check_color_diff(self._img_path) else 0
 
+    @property
+    def is_day_ground(self):
+        # Ground truth for day/night based on folder name
+        if "day" in self._img_path.lower():
+            return 1
+        elif "night" in self._img_path.lower():
+            return 0
+        else:
+            return -1  # Unknown
 
 class DatasetBase:
     def __init__(
@@ -149,14 +170,14 @@ class DatasetBase:
                 )
 
     def show_dataset_info(self):
-        headers = ["Subset", "# images", "# ids", "# cameras"]
+        headers = ["Subset", "# images", "# ids", "# cameras", '#day', '#night']
         train_info = get_dataset_info(self._train_data)
         gallery_info = get_dataset_info(self._gallery_data)
         query_info = get_dataset_info(self._query_data)
         table = [
-            ["train"] + list(train_info)[0:3], 
-            ["gallery"] + list(gallery_info)[0:3], 
-            ["query"] + list(query_info)[0:3]
+            ["train"] + list(train_info)[0:3] + list(train_info)[-2:], 
+            ["gallery"] + list(gallery_info)[0:3] + list(gallery_info)[-2:], 
+            ["query"] + list(query_info)[0:3] + list(query_info)[-2:]
             ]
         print("Dataset statistics:")
         print(tabulate(table, headers = headers, tablefmt = "github"))

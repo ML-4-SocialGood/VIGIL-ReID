@@ -105,106 +105,11 @@ def get_cfg_default():
     _C.MODEL.DinoV3ZeroShot.BACKBONE = "dinov3_vitb16"
     _C.MODEL.DinoV3ZeroShot.REPO = ""
 
-    # CoOp
-    _C.MODEL.CoOp = CN()
-    _C.MODEL.CoOp.BACKBONE = "ViT-B/32"
-    _C.MODEL.CoOp.N_CTX = 16
-    _C.MODEL.CoOp.CSC = False
-    _C.MODEL.CoOp.PREC = "fp16"
-    _C.MODEL.CoOp.CLASS_TOKEN_POSITION = "end"
-
-    # CoCoOp
-    _C.MODEL.CoCoOp = CN()
-    _C.MODEL.CoCoOp.BACKBONE = "ViT-B/32"
-    _C.MODEL.CoCoOp.N_CTX = 16
-    _C.MODEL.CoCoOp.PREC = "fp16"
-
-    # CLIPAdapter
-    _C.MODEL.CLIPAdapter = CN()
-    _C.MODEL.CLIPAdapter.BACKBONE = "ViT-B/32"
-
-    # SIGLIPAdapter
-    _C.MODEL.SIGLIPAdapter = CN()
-    _C.MODEL.SIGLIPAdapter.CKPT = "google/siglip-so400m-patch14-384"
-
-    # SIGLIPAdapterInference
-    _C.MODEL.SIGLIPAdapterInference = CN()
-    _C.MODEL.SIGLIPAdapterInference.CKPT = "google/siglip-so400m-patch14-384"
-    _C.MODEL.SIGLIPAdapterInference.ADAPTER_WEIGHTS = ""
-    _C.MODEL.SIGLIPAdapterInference.ADAPTER_RATIO = 0.4
-
-    # RISE
-    _C.MODEL.RISE = CN()
-    _C.MODEL.RISE.BACKBONE = "ViT-B/32"
-    _C.MODEL.RISE.STUDENT_NETWORK = "resnet18"
-    _C.MODEL.RISE.LOSS_WEIGHT = CN()
-    _C.MODEL.RISE.LOSS_WEIGHT.DISTILLATION = 0.90
-    _C.MODEL.RISE.LOSS_WEIGHT.CLASSIFICATION = 0.10
-    _C.MODEL.RISE.LOSS_WEIGHT.DISTANCE = 0.50
-    _C.MODEL.RISE.TEMPERATURE = 3.0
-
-    # NKD
-    _C.MODEL.NKD = CN()
-    _C.MODEL.NKD.BACKBONE = "ViT-B/32"
-    _C.MODEL.NKD.STUDENT_NETWORK = "resnet18"
-    _C.MODEL.NKD.LOSS_WEIGHT = CN()
-    _C.MODEL.NKD.LOSS_WEIGHT.DISTILLATION = 0.90
-    _C.MODEL.NKD.LOSS_WEIGHT.CLASSIFICATION = 0.10
-    _C.MODEL.NKD.TEMPERATURE = 3.0
-
-    # BOKD
-    _C.MODEL.BOLD = CN()
-    _C.MODEL.BOLD.BACKBONE = "ViT-B/32"
-    _C.MODEL.BOLD.DOMAIN_LOSS_WEIGHT = 0.1
-    _C.MODEL.BOLD.ADAPTER_RATIO = 0.2
-    _C.MODEL.BOLD.STUDENT_NETWORK = "resnet50"
-    _C.MODEL.BOLD.LOSS_WEIGHT = CN()
-    _C.MODEL.BOLD.LOSS_WEIGHT.DISTILLATION = 0.20
-    _C.MODEL.BOLD.LOSS_WEIGHT.CLASSIFICATION = 0.60
-    _C.MODEL.BOLD.TEMPERATURE = 3.0
-
-    # LGDS
-    _C.MODEL.LGDS = CN()
-    _C.MODEL.LGDS.BACKBONE = "ViT-B/32"
-
-    # ERM
-    _C.MODEL.ERM = CN()
-    _C.MODEL.ERM.BACKBONE = "resnet18"
-
-    # CrossGrad
-    _C.MODEL.CrossGrad = CN()
-    _C.MODEL.CrossGrad.BACKBONE = "resnet18"
-    _C.MODEL.CrossGrad.EPS_C = 1.0  # scaling parameter for D's gradients
-    _C.MODEL.CrossGrad.EPS_D = 1.0  # scaling parameter for F's gradients
-    _C.MODEL.CrossGrad.ALPHA_C = 0.5  # balancing weight for the label net's loss
-    _C.MODEL.CrossGrad.ALPHA_D = 0.5  # balancing weight for the domain net's loss
-
-    # DDAIG
-    _C.MODEL.DDAIG = CN()
-    _C.MODEL.DDAIG.BACKBONE = "resnet18"
-    _C.MODEL.DDAIG.G_ARCH = "fcn_3x32_gctx"
-    _C.MODEL.DDAIG.LMDA = 0.3  # perturbation weight
-    _C.MODEL.DDAIG.ALPHA = 0.5  # balancing weight for the losses
-
-    # MixStyle
-    _C.MODEL.MixStyle = CN()
-    _C.MODEL.MixStyle.BACKBONE = "resnet18"
-
-    # DOMAINMIX
-    _C.MODEL.DomainMix = CN()
-    _C.MODEL.DomainMix.BACKBONE = "resnet18"
-    _C.MODEL.DomainMix.TYPE = "crossdomain"
-    _C.MODEL.DomainMix.ALPHA = 1.0
-    _C.MODEL.DomainMix.BETA = 1.0
-
-    # EFDMix
-    _C.MODEL.EFDMix = CN()
-    _C.MODEL.EFDMix.BACKBONE = "resnet18"
-
-    # DAF
-    _C.MODEL.DAF = CN()
-    _C.MODEL.DAF.BACKBONE = "resnet18"
-    _C.MODEL.DAF.G_ARCH = "fcn_3x32_gctx"
+    # DINOAdapter
+    _C.MODEL.DinoAdapter = CN()
+    _C.MODEL.DinoAdapter.WEIGHT_PATH = ""
+    _C.MODEL.DinoAdapter.BACKBONE = "dinov3_vitb16"
+    _C.MODEL.DinoAdapter.REPO = "" 
 
     # ====================
     # Optimizer CfgNode
@@ -245,7 +150,7 @@ def get_cfg_default():
     # Solver CfgNode
     # ====================
     _C.SOLVER = CN()
-    _C.SOLVER.MARGIN = 0.3
+    _C.SOLVER.MARGIN = None
 
     # ====================
     # Test CfgNode

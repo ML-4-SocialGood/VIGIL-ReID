@@ -1,4 +1,7 @@
 from collections import defaultdict
+import os
+import shutil
+import numpy as np
 import torch
 import torch.distributed as dist
 
@@ -10,10 +13,11 @@ from .sampler import build_sampler
 from .transforms import build_transform
 
 
+
 def train_collate_fn(batch):
     """Collate function for training data loader."""
     batch_dict = {}
-    img_paths, aids, camids, viewids, imgs, domains = [], [], [], [], [], []
+    img_paths, aids, camids, viewids, imgs, domains, time = [], [], [], [], [], [], []
     for b_dict in batch:
         img_paths.append(b_dict["img_path"])
         aids.append(b_dict["aid"])
@@ -21,6 +25,7 @@ def train_collate_fn(batch):
         viewids.append(b_dict["viewid"])
         imgs.append(b_dict["img"])
         domains.append(b_dict["domain"]) 
+        time.append(b_dict["time"])  
     
     batch_dict["img_paths"] = img_paths
     batch_dict["aids"] = torch.tensor(aids, dtype = torch.int64)
@@ -28,6 +33,7 @@ def train_collate_fn(batch):
     batch_dict["viewids"] = torch.tensor(viewids, dtype = torch.int64)
     batch_dict["imgs"] = torch.stack(imgs, dim = 0)
     batch_dict["domains"] = domains 
+    batch_dict["time"] = time
 
     return batch_dict
 
@@ -35,7 +41,7 @@ def train_collate_fn(batch):
 def test_collate_fn(batch):
     """Collate function for test data loader."""
     batch_dict = {}
-    img_paths, aids, camids, viewids, imgs, domains = [], [], [], [], [], []
+    img_paths, aids, camids, viewids, imgs, domains, time = [], [], [], [], [], [], []
     for b_dict in batch:
         img_paths.append(b_dict["img_path"])
         aids.append(b_dict["aid"])
@@ -43,6 +49,8 @@ def test_collate_fn(batch):
         viewids.append(b_dict["viewid"])
         imgs.append(b_dict["img"])
         domains.append(b_dict["domain"])  
+        time.append(b_dict["time"])
+
     
     batch_dict["img_paths"] = img_paths
     batch_dict["aids"] = torch.tensor(aids, dtype = torch.int64)
@@ -50,6 +58,7 @@ def test_collate_fn(batch):
     batch_dict["viewids"] = torch.tensor(viewids, dtype = torch.int64)
     batch_dict["imgs"] = torch.stack(imgs, dim = 0)
     batch_dict["domains"] = domains  
+    batch_dict["time"] = time
 
     return batch_dict
 
@@ -232,7 +241,8 @@ class DatasetWrapper(Dataset):
             "aid": datum.aid, 
             "camid": datum.camid, 
             "viewid": datum.viewid, 
-            "domain": datum.domain_label 
+            "domain": datum.domain_label,
+            "time": datum.is_day  # Store time of day information (1 for day, 0 for night)
         }
 
         img = Image.open(datum.img_path).convert("RGB")
