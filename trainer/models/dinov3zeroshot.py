@@ -14,7 +14,7 @@ from utils import PROMPT_TEMPLATES
 class DinoV3ZeroShot(Trainer):
     def build_model(self):
         # Load model with memory optimization
-        self.model = torch.hub.load(self.cfg.MODEL.DinoZeroShot.REPO, self.cfg.MODEL.DinoZeroShot.BACKBONE, source='local', weights=self.cfg.MODEL.DinoZeroShot.WEIGHT_PATH)
+        self.model = torch.hub.load(self.cfg.MODEL.DinoV3ZeroShot.REPO, self.cfg.MODEL.DinoV3ZeroShot.BACKBONE, source='local', weights=self.cfg.MODEL.DinoV3ZeroShot.WEIGHT_PATH)
         self.model.eval()
         
         # Enable gradient checkpointing to save memory
