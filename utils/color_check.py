@@ -119,31 +119,3 @@ def classify_image(img_path, corr_thresh=0.99, color_thresh=15):
         return "grayscale"
     else:
         return "color"
-
-if __name__ == "__main__":
-    # root = "/raid/clou785/ReID/Cat"
-
-    # for dir in os.listdir(root):
-    #     dir_path = os.path.join(root, dir)
-    #     if not os.path.isdir(dir_path):
-    #         continue
-    #     print(f"Processing directory: {dir_path}")
-
-    #     new_path_gray = os.path.join(dir_path, "gray")
-    #     os.makedirs(new_path_gray, exist_ok=True)
-
-    #     new_path_color = os.path.join(dir_path, "color")
-    #     os.makedirs(new_path_color, exist_ok=True)
-    #     for file in os.listdir(dir_path):
-    #         if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-    #             is_color = check_color_diff(os.path.join(dir_path, file))
-    #             if is_color:
-              
-    #                 shutil.copy2(os.path.join(dir_path, file), os.path.join(new_path_color, file))
-    #             else:
-     
-    #                 shutil.copy2(os.path.join(dir_path, file), os.path.join(new_path_gray, file))
-    
-    img_path = "/raid/clou785/ReID/Cat/train/14_AucklandIsland-B2-2-1-SD111_533_AucklandIsland-B2-2-1-SD111-20190222-02160324-20190216060920_cat.jpg"
-    print(check_color_diff(img_path))
-    # print(is_grayscale_std(img_path))

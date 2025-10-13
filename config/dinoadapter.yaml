@@ -1,0 +1,44 @@
+DATALOADER:
+  TRAIN:
+    BATCH_SIZE: 64
+    NUM_INSTANCES: 4
+    SAMPLER: "RandomIdentitySampler"
+  TEST:
+    BATCH_SIZE: 64
+  NUM_WORKERS: 8
+
+INPUT:
+  SIZE: (256, 256)
+  INTERPOLATION: "bicubic"
+  PIXEL_MEAN: [0.485, 0.456, 0.406]
+  PIXEL_STD: [0.229, 0.224, 0.225]
+  TRANSFORMS: ["random_resized_crop", "random_flip", "normalize", "color_jitter", "random_erase"]
+
+OPTIM:
+  NAME: "adamw"  
+  LR: 0.001
+  MAX_EPOCH: 10
+  LR_SCHEDULER: "Cosine"
+  WEIGHT_DECAY: 0.01
+
+  # Domain-specific learning rate configurations (optional, fallback to above settings)
+  DOMAIN_OPTIM:
+    # Different learning rates for different domains 
+    DOMAIN_LR_MULTIPLIERS: [1.0, 1.0] 
+    
+    # Different schedulers for different domains
+    DOMAIN_SCHEDULERS: ["Cosine", "Cosine"]     
+
+
+TRAIN:
+  PRINT_FREQ: 100
+
+MODEL:
+  NAME: DinoAdapter
+  METRIC_LOSS_TYPE: "triplet"
+  NO_MARGIN: False
+  IF_LABELSMOOTH: "on"
+  DinoAdapter:
+    WEIGHT_PATH: "/raid/clou785/speciesnet_code/models/dinov3_vith16plus_pretrain_lvd1689m-7c1da9a5.pth"
+    BACKBONE: "dinov3_vith16plus"
+    REPO: "/home/clou785/VIGIL-ReID/trainer/models/dinov3"

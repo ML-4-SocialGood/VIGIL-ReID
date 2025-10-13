@@ -1,0 +1,42 @@
+DATALOADER:
+  TRAIN:
+    BATCH_SIZE: 256
+    NUM_INSTANCES: 64
+    SAMPLER: "RandomIdentitySampler"
+  TEST:
+    BATCH_SIZE: 64
+  NUM_WORKERS: 8
+
+INPUT:
+  SIZE: (384, 384)
+  INTERPOLATION: "bicubic"
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+
+OPTIM:
+  NAME: "adamw"
+  LR: 0.001
+  MAX_EPOCH: 25
+  LR_SCHEDULER: "Cosine"
+  WARMUP_EPOCH: 1
+  WARMUP_TYPE: "constant"
+  WARMUP_CONS_LR: 1e-5
+  WEIGHT_DECAY: 0.01
+
+TRAIN:
+  PRINT_FREQ: 100
+
+MODEL:
+  NAME: SIGLIPAdapterInference
+  METRIC_LOSS_TYPE: "triplet"
+  NO_MARGIN: False
+  IF_LABELSMOOTH: "on"
+  ID_LOSS_WEIGHT: 1.0
+  TRIPLET_LOSS_WEIGHT: 4.0
+  SIGLIPAdapterInference:
+    CKPT: "google/siglip-so400m-patch14-384"
+    ADAPTER_WEIGHTS: "/home/clou785/VIGIL-ReID/output/model_stoat.pth.tar-20"
+    ADAPTER_RATIO: 0.4
+
+SOLVER:
+  MARGIN: 0.3

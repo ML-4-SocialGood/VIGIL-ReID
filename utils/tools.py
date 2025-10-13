@@ -76,7 +76,7 @@ def listdir_nonhidden(path, sort=True):
 
     Args:
         path (str): Directory path.
-        sort (bool, optional): Whether to sort the items. Defaults to False.
+        sort (bool, optional): Whether to sort the items. Defaults to True.
 
     Returns:
         list: All non-hidden items in a given directory.

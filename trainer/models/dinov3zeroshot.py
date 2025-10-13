@@ -3,6 +3,7 @@ import logging
 import os
 import torch
 import torch.nn as nn
+from .dino_utils import create_linear_input
 
 from trainer import MODEL_REGISTRY, Trainer
 
@@ -13,7 +14,7 @@ from utils import PROMPT_TEMPLATES
 class DinoV3ZeroShot(Trainer):
     def build_model(self):
         # Load model with memory optimization
-        self.model = torch.hub.load(self.cfg.MODEL.DinoV3ZeroShot.REPO, self.cfg.MODEL.DinoV3ZeroShot.BACKBONE, source='local', weights=self.cfg.MODEL.DinoV3ZeroShot.WEIGHT_PATH)
+        self.model = torch.hub.load(self.cfg.MODEL.DinoZeroShot.REPO, self.cfg.MODEL.DinoZeroShot.BACKBONE, source='local', weights=self.cfg.MODEL.DinoZeroShot.WEIGHT_PATH)
         self.model.eval()
         
         # Enable gradient checkpointing to save memory
@@ -24,20 +25,7 @@ class DinoV3ZeroShot(Trainer):
 
     def model_inference(self, input_data, domain):
         x_tokens_list = self.model.get_intermediate_layers(input_data, n=1, return_class_token=True)
-        image_features = self._create_linear_input(x_tokens_list, 1, False)
+        image_features = create_linear_input(x_tokens_list, 1, False)
         image_features = torch.nn.functional.normalize(image_features, dim=-1, eps=1e-6)
         return image_features
     
-    def _create_linear_input(self, x_tokens_list, use_n_blocks, use_avgpool):
-        intermediate_output = x_tokens_list[-use_n_blocks:]
-        output = torch.cat([class_token for _, class_token in intermediate_output], dim=-1)
-        if use_avgpool:
-            output = torch.cat(
-                (
-                    output,
-                    torch.mean(intermediate_output[-1][0], dim=1),  # patch tokens
-                ),
-                dim=-1,
-            )
-            output = output.reshape(output.shape[0], -1)
-        return output.float()

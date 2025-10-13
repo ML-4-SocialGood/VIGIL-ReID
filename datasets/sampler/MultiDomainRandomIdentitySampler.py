@@ -68,13 +68,8 @@ class MultiDomainRandomIdentitySampler(Sampler):
 
         # Ensure each batch contains samples from only one domain
         while len(avai_domains) > 0:
-            # Check if any domain has enough AIDs for a batch
-            valid_domains = [d for d in avai_domains if len(avai_aids[d]) >= self.num_aids_per_batch]
-            if not valid_domains:
-                break
-                
             # Select a random domain that has enough AIDs
-            selected_domain = random.choice(valid_domains)
+            selected_domain = random.choice(avai_domains)
             selected_aids = random.sample(avai_aids[selected_domain], self.num_aids_per_batch)
             
             for aid in selected_aids:
@@ -84,7 +79,7 @@ class MultiDomainRandomIdentitySampler(Sampler):
                     avai_aids[selected_domain].remove(aid)
             
             # Remove domain if no more AIDs available
-            if len(avai_aids[selected_domain]) == 0:
+            if len(avai_aids[selected_domain]) < self.num_aids_per_batch:
                 avai_domains.remove(selected_domain)
 
         return iter(final_idxs)

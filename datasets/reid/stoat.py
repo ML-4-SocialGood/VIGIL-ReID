@@ -45,9 +45,9 @@ class Stoat(DatasetBase):
             print(f"=> {self._domain} loaded")
             self.show_dataset_info()
 
-        self.num_train_imgs, self.num_train_aids, self.num_train_cams, self.num_train_views = get_dataset_info(self.train_data)
-        self.num_gallery_imgs, self.num_gallery_aids, self.num_gallery_cams, self.num_gallery_views = get_dataset_info(self.gallery_data)
-        self.num_query_imgs, self.num_query_aids, self.num_query_cams, self.num_query_views = get_dataset_info(self.query_data)
+        self.num_train_imgs, self.num_train_aids, self.num_train_cams, self.num_train_views, _, _ = get_dataset_info(self.train_data)
+        self.num_gallery_imgs, self.num_gallery_aids, self.num_gallery_cams, self.num_gallery_views, _, _ = get_dataset_info(self.gallery_data)
+        self.num_query_imgs, self.num_query_aids, self.num_query_cams, self.num_query_views, _, _ = get_dataset_info(self.query_data)
 
     def _check_before_run(self):
         """Check if all files are available before going deeper"""

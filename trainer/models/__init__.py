@@ -5,3 +5,4 @@ from .siglipadapter import SIGLIPAdapter  # noqa
 from .siglipadapter_inference import SIGLIPAdapterInference  # noqa
 from .dinov3zeroshot import DinoV3ZeroShot  # noqa
 from .dinoadapter import DinoAdapter  # noqa
+from .dinodistill import DinoDistill  # noqa

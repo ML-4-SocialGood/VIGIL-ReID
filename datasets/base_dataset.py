@@ -82,7 +82,8 @@ class Datum:
     # 1 for day, 0 for night
     @property
     def is_day(self):
-        return 1 if check_color_diff(self._img_path) else 0
+        # return 1 if check_color_diff(self._img_path) else 0
+        return -1  # Unknown
 
     @property
     def is_day_ground(self):

@@ -2,8 +2,8 @@ import os
 
 import torch
 import torch.nn as nn
+from .dino_utils import create_linear_input
 from torch.nn import functional as F
-from transformers import AutoModel, AutoProcessor, SiglipVisionModel
 from metrics import compute_accuracy
 from optim import build_lr_scheduler, build_optimizer
 from trainer import MODEL_REGISTRY, Trainer
@@ -27,26 +27,28 @@ class Adapter(nn.Module):
         return x
 
 
-class CustomSIGLIP(nn.Module):
-    def __init__(self, cfg, num_classes, siglip_model, domains):
+class CustomDino(nn.Module):
+    def __init__(self, cfg, num_classes, dino_model, domains):
         super().__init__()
         self.cfg = cfg
-        self.siglip_model = siglip_model
+        self.dino_model = dino_model
 
-        proj_dim = siglip_model.config.text_config.projection_size
+        output_dim = self.dino_model.embed_dim
         self.adapter_dict = nn.ModuleDict()
         self.classifier_dict = nn.ModuleDict()
         for i, domain in enumerate(domains):
-            self.adapter_dict[f"adapter_{i}"] = Adapter(proj_dim, 4)
-            self.classifier_dict[f"classifier_{i}"] = nn.Linear(proj_dim, num_classes[i])
-        self.dtype = siglip_model.dtype
+            self.adapter_dict[f"adapter_{i}_day"] = Adapter(output_dim, 4)
+            self.adapter_dict[f"adapter_{i}_night"] = Adapter(output_dim, 4)
+            self.classifier_dict[f"classifier_{i}"] = nn.Linear(output_dim, num_classes[i])
         self.num_classes = num_classes
         self.domains = domains
 
-    def forward(self, image, domains):
+    def forward(self, image, domains, time):
         adapter_ratio = 0.4  
-        # Get projected image features directly from SigLIP (already projected!)
-        image_features = self.siglip_model.get_image_features(**{'pixel_values': image})
+        # Get cls token from DINO
+        x_tokens_list = self.dino_model.get_intermediate_layers(image, n=1, return_class_token=True)
+        image_features = create_linear_input(x_tokens_list, 1, False)
+        image_features = torch.nn.functional.normalize(image_features, dim=-1, eps=1e-6)
         base_features = image_features.float()
 
         # Check if all samples in batch have the same domain (training case)
@@ -67,7 +69,10 @@ class CustomSIGLIP(nn.Module):
                 feature = base_features[i:i+1]  # Keep batch dimension: [1, proj_dim]
                 
                 # Apply the corresponding adapter
-                adapter_features = self.adapter_dict[f"adapter_{domain_id}"](feature)
+                if time[i] == 0:  # night
+                    adapter_features = self.adapter_dict[f"adapter_{domain_id}_night"](feature)
+                else:  # day
+                    adapter_features = self.adapter_dict[f"adapter_{domain_id}_day"](feature)
                 mixed_feature = (
                     adapter_ratio * adapter_features + (1 - adapter_ratio) * feature
                 )
@@ -86,7 +91,10 @@ class CustomSIGLIP(nn.Module):
                 feature = base_features[i:i+1]  # Keep batch dimension: [1, proj_dim]
                 
                 # Apply the corresponding adapter
-                adapter_features = self.adapter_dict[f"adapter_{domain_id}"](feature)
+                if time[i] == 0:  # night
+                    adapter_features = self.adapter_dict[f"adapter_{domain_id}_night"](feature)
+                else:  # day
+                    adapter_features = self.adapter_dict[f"adapter_{domain_id}_day"](feature)
                 mixed_feature = (
                     adapter_ratio * adapter_features + (1 - adapter_ratio) * feature
                 )
@@ -103,21 +111,20 @@ class CustomSIGLIP(nn.Module):
 
 
 @MODEL_REGISTRY.register()
-class SIGLIPAdapter(Trainer):
+class DinoAdapter(Trainer):
     """
-    SIGLIP-Adapter for multi-source domain adaptation
+    Dino-Adapter for multi-source domain adaptation
     """
 
     def build_model(self):
-        print("Loading SIGLIP Checkpoint: {}".format(self.cfg.MODEL.SIGLIPAdapter.CKPT))
-        siglip_model= AutoModel.from_pretrained(
-            self.cfg.MODEL.SIGLIPAdapter.CKPT,
-        )
-        self.siglip_model = siglip_model.to(self.device)
+        print("Loading Dino backbone: {}".format(self.cfg.MODEL.DinoAdapter.BACKBONE))
+        dino_model = torch.hub.load(self.cfg.MODEL.DinoAdapter.REPO, self.cfg.MODEL.DinoAdapter.BACKBONE, source='local', 
+                                    weights=self.cfg.MODEL.DinoAdapter.WEIGHT_PATH)
+        self.dino_model = dino_model.to(self.device)
 
-        print("Building Custom SIGLIP")
-        self.model = CustomSIGLIP(
-            self.cfg, self.data_manager.num_classes, siglip_model, self.data_manager.get_target_domains
+        print("Building Custom Dino")
+        self.model = CustomDino(
+            self.cfg, self.data_manager.num_classes, dino_model, self.data_manager.get_target_domains
         )
 
         print("Turning Off Gradients in Image and Text Encoder")
@@ -142,7 +149,8 @@ class SIGLIPAdapter(Trainer):
         for domain_id, domain_name in enumerate(self.data_manager.get_target_domains):
             # Get domain-specific parameters (adapter + classifier for this domain)
             domain_params = []
-            domain_params.extend(list(self.model.adapter_dict[f"adapter_{domain_id}"].parameters()))
+            domain_params.extend(list(self.model.adapter_dict[f"adapter_{domain_id}_day"].parameters()))
+            domain_params.extend(list(self.model.adapter_dict[f"adapter_{domain_id}_night"].parameters()))
             domain_params.extend(list(self.model.classifier_dict[f"classifier_{domain_id}"].parameters()))
             
             # Get domain-specific learning rate multiplier if available
@@ -181,7 +189,7 @@ class SIGLIPAdapter(Trainer):
         image, target, domains, time = self.parse_batch_train(batch_data)
         # all samples in the batch have the same domain
         domain = domains[0]
-        output, feat = self.model(image, domains)
+        output, feat = self.model(image, domains, time)
         loss_func, center_criterion = make_loss(self.cfg, self.num_classes[domain], self.device)
         loss, ID_LOSS, TRI_LOSS = loss_func(output, feat, target, None)
 
@@ -201,8 +209,8 @@ class SIGLIPAdapter(Trainer):
 
         return loss_summary
 
-    def model_inference(self, batch_data, domains):
-        _, feat = self.model(batch_data, domains)
+    def model_inference(self, batch_data, domains, time):
+        _, feat = self.model(batch_data, domains, time)
         return feat
     
     def _build_domain_scheduler(self, optimizer, domain_id):

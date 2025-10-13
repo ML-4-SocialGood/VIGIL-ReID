@@ -81,11 +81,6 @@ def get_cfg_default():
     _C.MODEL.TRIPLET_LOSS_WEIGHT = 1.0
     _C.MODEL.I2T_LOSS_WEIGHT = 1.0
 
-    # DomainMix
-    _C.MODEL.DOMAINMIX = CN()
-    _C.MODEL.DOMAINMIX.TYPE = "crossdomain"
-    _C.MODEL.DOMAINMIX.ALPHA = 1.0
-    _C.MODEL.DOMAINMIX.BETA = 1.0
 
     # CLIPZeroShot
     _C.MODEL.CLIPZeroShot = CN()
@@ -110,6 +105,17 @@ def get_cfg_default():
     _C.MODEL.DinoAdapter.WEIGHT_PATH = ""
     _C.MODEL.DinoAdapter.BACKBONE = "dinov3_vitb16"
     _C.MODEL.DinoAdapter.REPO = "" 
+
+    # DinoDistill
+    _C.MODEL.DinoDistill = CN()
+    _C.MODEL.DinoDistill.WEIGHT_PATH = ""
+    _C.MODEL.DinoDistill.BACKBONE = "dinov3_vitb16"
+    _C.MODEL.DinoDistill.REPO = ""
+    _C.MODEL.DinoDistill.STUDENT_WEIGHT_PATH = ""
+    _C.MODEL.DinoDistill.STUDENT_BACKBONE = "dinov3_vitb16"
+    _C.MODEL.DinoDistill.DISTILL = False
+    _C.MODEL.DinoDistill.FINETUNE = False
+
 
     # ====================
     # Optimizer CfgNode
