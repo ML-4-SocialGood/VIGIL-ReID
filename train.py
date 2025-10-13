@@ -98,7 +98,7 @@ def print_args(args, cfg):
 def main(args):
     cfg = setup_cfg(args)
 
-    zero_shot_models = ["CLIPZeroShot", "SIGLIPZeroShot"]
+    zero_shot_models = ["CLIPZeroShot", "SIGLIPZeroShot", "SIGLIPAdapterInference", "DinoV3ZeroShot"]
 
     if cfg.SEED >= 0:
         set_random_seed(cfg.SEED)
