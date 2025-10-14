@@ -8,3 +8,5 @@ from .panda import Panda  # noqa
 from .nyala import Nyala  # noqa
 from .dog import Dog  # noqa
 from .seaStar import SeaStar  # noqa
+from .skink import Skink # noqa
+# from .feralpig import FeralPig # noqa

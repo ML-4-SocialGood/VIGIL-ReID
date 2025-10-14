@@ -192,7 +192,7 @@ class Trainer:
 
         print("Evaluate on the {} Set".format(split))
 
-        for _, batch_data in enumerate(data_loader):
+        for _, batch_data in enumerate(tqdm(data_loader)):
             input_data, target, domain, camids = self.parse_batch_test(batch_data)
             output = self.model_inference(input_data, domain)
             self.evaluator.process((output.cpu(), target.cpu().tolist(), camids, domain))
