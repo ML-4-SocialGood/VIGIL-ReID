@@ -12,14 +12,14 @@ INPUT:
   INTERPOLATION: "bicubic"
   PIXEL_MEAN: [0.5, 0.5, 0.5]
   PIXEL_STD: [0.5, 0.5, 0.5]
-  TRANSFORMS: ["random_resized_crop", "random_flip", "normalize"]
+  TRANSFORMS: ["random_resized_crop", "random_flip", "normalize", "color_jitter", "random_erase"]
 
 OPTIM:
   NAME: "adamw"  
-  LR: 0.001
+  LR: 0.002
   MAX_EPOCH: 1
   LR_SCHEDULER: "Cosine"
-  WARMUP_EPOCH: 0
+  WARMUP_EPOCH: 1
   WARMUP_TYPE: "constant"
   WARMUP_CONS_LR: 1e-5
   WEIGHT_DECAY: 0.01
@@ -27,14 +27,14 @@ OPTIM:
   # Domain-specific learning rate configurations (optional, fallback to above settings)
   DOMAIN_OPTIM:
     # Different learning rates for different domains 
-    DOMAIN_LR_MULTIPLIERS: [1.0, 1.5] 
+    DOMAIN_LR_MULTIPLIERS: [1.0, 1.0] 
     
     # Different schedulers for different domains
     DOMAIN_SCHEDULERS: ["Cosine", "Cosine"]     
 
 
 TRAIN:
-  PRINT_FREQ: 5
+  PRINT_FREQ: 100
 
 MODEL:
   NAME: SIGLIPAdapter

@@ -31,7 +31,7 @@ OPTIM:
 
 
 TRAIN:
-  PRINT_FREQ: 100
+  PRINT_FREQ: 5
 
 MODEL:
   NAME: DinoDistill

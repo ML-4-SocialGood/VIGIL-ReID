@@ -10,10 +10,22 @@ from trainer import MODEL_REGISTRY, Trainer
 from utils import PROMPT_TEMPLATES
 from loss.make_loss import make_loss
 
+class DinoStudent(nn.Module):
+    def __init__(self, cfg, student_backbone, dimention_student, dimention_teacher):
+        super().__init__()
+        self.backbone = student_backbone
+        self.cfg = cfg
+        self.proj = nn.Linear(dimention_student, dimention_teacher, bias = False)
+
+    def forward(self, x):
+        feature_student = create_linear_input(self.backbone.get_intermediate_layers(x, n=1, return_class_token=True), 1, False)
+        feature_student_teacher_space = self.proj(feature_student)
+        return feature_student_teacher_space, feature_student
+
 @MODEL_REGISTRY.register()
 class DinoDistill(Trainer):
     """
-    Dino-Adapter for multi-source domain adaptation
+    Distillation from DINO teacher to DINO student with optional finetuning on ReID task.
     """
 
     def build_model(self):
@@ -25,9 +37,31 @@ class DinoDistill(Trainer):
         for param in self.dino_teacher.parameters():
             param.requires_grad_(False)
 
-        dino_student = torch.hub.load(self.cfg.MODEL.DinoDistill.REPO, self.cfg.MODEL.DinoDistill.STUDENT_BACKBONE, source='local', 
-                        weights=self.cfg.MODEL.DinoDistill.STUDENT_WEIGHT_PATH)
-        self.dino_student = dino_student.to(self.device)
+        student_backbone = torch.hub.load(
+            self.cfg.MODEL.DinoDistill.REPO,
+            self.cfg.MODEL.DinoDistill.STUDENT_BACKBONE,
+            source="local",
+            weights=self.cfg.MODEL.DinoDistill.STUDENT_WEIGHT_PATH,
+        )
+
+        teacher_embed_dim = getattr(self.dino_teacher, "embed_dim", None) or getattr(
+            self.dino_teacher, "num_features", None
+        )
+        student_embed_dim = getattr(student_backbone, "embed_dim", None) or getattr(
+            student_backbone, "num_features", None
+        )
+        if teacher_embed_dim is None or student_embed_dim is None:
+            raise AttributeError(
+                "Unable to determine embed dimensions for teacher/student backbones required for projection."
+            )
+
+        self.dino_student = DinoStudent(
+            self.cfg,
+            student_backbone,
+            student_embed_dim,
+            teacher_embed_dim,
+        ).to(self.device)
+
         self.optimizer = build_optimizer(self.dino_student, self.cfg.OPTIM)
         self.lr_scheduler = build_lr_scheduler(self.optimizer, self.cfg.OPTIM)
 
@@ -45,7 +79,7 @@ class DinoDistill(Trainer):
         for name, param in self.dino_student.named_parameters():
             if param.requires_grad:
                 enabled_params.add(name)
-        print("Parameters to be updated: {}".format(enabled_params))
+        # print("Parameters to be updated: {}".format(enabled_params))
 
         self.dino_student.to(self.device)
 
@@ -54,40 +88,41 @@ class DinoDistill(Trainer):
         image, target, domains, time = self.parse_batch_train(batch_data)
         domain = domains[0]  # Assume all samples in batch are from the same domain for training
 
-        student_output = create_linear_input(self.dino_student.get_intermediate_layers(image, n=1, return_class_token=True), 1, False)
-        student_output = nn.functional.normalize(student_output, dim=-1, eps=1e-6)
+        student_teacher_space, student_native = self.dino_student(image)
+        student_teacher_space = nn.functional.normalize(student_teacher_space, dim=-1, eps=1e-6)
+        student_native = nn.functional.normalize(student_native, dim=-1, eps=1e-6)
 
-        distillation_loss = 0
-        reid_loss = 0
+        distillation_loss = torch.tensor(0.0, device=image.device)
+        reid_loss = torch.tensor(0.0, device=image.device)
         if self.cfg.MODEL.DinoDistill.DISTILL:
             with torch.no_grad():
                 teacher_output = create_linear_input(self.dino_teacher.get_intermediate_layers(image, n=1, return_class_token=True), 1, False)
                 teacher_output = nn.functional.normalize(teacher_output, dim=-1, eps=1e-6)
 
-            distillation_loss = F.kl_div(F.log_softmax(student_output / 0.2, dim=1), F.softmax(teacher_output / 0.2, dim=1), reduction="batchmean", ) * 0.2**2
+            distillation_loss = F.kl_div(
+                F.log_softmax(student_teacher_space / 0.2, dim=1),
+                F.softmax(teacher_output / 0.2, dim=1),
+                reduction="batchmean",
+            ) * 0.2**2
 
         if self.cfg.MODEL.DinoDistill.FINETUNE:
             loss_func, center_criterion = make_loss(self.cfg, self.num_classes[domain], self.device)
-            loss, ID_LOSS, TRI_LOSS = loss_func(student_output, student_output, target, None)
+            loss, ID_LOSS, TRI_LOSS = loss_func(student_native, student_native, target, None)
             reid_loss = loss
         loss = distillation_loss + reid_loss
 
-        # Use domain-specific optimizer for backward and update
         self.model_backward_and_update(loss)
 
         loss_summary = {
-            "domain": self.data_manager.get_source_domains[domain],
-            "domain_id": domain,
             "loss": loss.item(),
             "distillation_loss": distillation_loss.item(),
             "reid_loss": reid_loss.item(),
         }
 
-        # LR scheduler now steps once per epoch in Trainer.after_epoch
-
         return loss_summary
 
     def model_inference(self, batch_data, domains, time):
-        _, feat = self.dino_student(batch_data, domains, time)
+        _, feat = self.dino_student(batch_data)
+        feat = nn.functional.normalize(feat, dim=-1, eps=1e-6)
         return feat
     
