@@ -90,6 +90,10 @@ def get_cfg_default():
     _C.MODEL.SIGLIPZeroShot = CN()
     _C.MODEL.SIGLIPZeroShot.CKPT = "google/siglip-so400m-patch14-384"
 
+    _C.MODEL.SIGLIPAdapter = CN()
+    _C.MODEL.SIGLIPAdapter.CKPT = "google/siglip-so400m-patch14-384"
+   
+
     # CLIPLinearProbe
     _C.MODEL.CLIPLinearProbe = CN()
     _C.MODEL.CLIPLinearProbe.BACKBONE = "ViT-B/32"
