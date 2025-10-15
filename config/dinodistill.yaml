@@ -1,6 +1,6 @@
 DATALOADER:
   TRAIN:
-    BATCH_SIZE: 16
+    BATCH_SIZE: 64
     NUM_INSTANCES: 4
     SAMPLER: "RandomIdentitySampler"
   TEST:
@@ -16,8 +16,8 @@ INPUT:
 
 OPTIM:
   NAME: "adamw"  
-  LR: 0.001
-  MAX_EPOCH: 20
+  LR: 0.0003
+  MAX_EPOCH: 15
   LR_SCHEDULER: "Cosine"
   WEIGHT_DECAY: 0.01
 
