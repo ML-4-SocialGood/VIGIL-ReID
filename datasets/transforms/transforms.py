@@ -36,7 +36,6 @@ def _build_transform_train(cfg, transform_choices):
             RandomResizedCrop(
                 size=cfg.INPUT.SIZE,
                 scale=cfg.INPUT.RRCROP_SCALE,
-                ratio=(0.8, 1.25),
                 interpolation=interp_mode,
             )
         ]
@@ -49,10 +48,10 @@ def _build_transform_train(cfg, transform_choices):
     if "color_jitter" in transform_choices:
         transform_train += [
             ColorJitter(
-                brightness=0.3,
-                contrast=0.2,
-                saturation=0.3,
-                hue=0.05,
+                brightness=0.4,
+                contrast=0.4,
+                saturation=0.4,
+                hue=0.1,
             )
         ]
     
@@ -67,7 +66,7 @@ def _build_transform_train(cfg, transform_choices):
     # RandomErasing expects a tensor image; apply after ToTensor/Normalize
     if "random_erase" in transform_choices:
         transform_train += [
-            RandomErasing(p=0.25, scale=(0.02, 0.2))
+            RandomErasing()
         ]
 
     transform_train = Compose(transform_train)

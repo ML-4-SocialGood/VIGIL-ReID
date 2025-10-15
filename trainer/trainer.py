@@ -204,8 +204,9 @@ class Trainer:
         image = batch_data["imgs"].to(self.device)
         target = batch_data["aids"].to(self.device)
         domain = batch_data["domains"]
+        time = batch_data["time"]
 
-        return image, target, domain
+        return image, target, domain, time
 
     def parse_batch_test(self, batch_data):
         input_data = batch_data["imgs"].to(self.device)
