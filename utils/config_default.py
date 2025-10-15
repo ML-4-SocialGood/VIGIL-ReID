@@ -22,7 +22,7 @@ def get_cfg_default():
     # Random Crop
     _C.INPUT.CROP_PADDING = 4
     # Random Resized Crop
-    _C.INPUT.RRCROP_SCALE = (0.08, 1.0)
+    _C.INPUT.RRCROP_SCALE = (0.4, 1.0)
     # Cutout
     _C.INPUT.CUTOUT_N = 1
     _C.INPUT.CUTOUT_LEN = 16
