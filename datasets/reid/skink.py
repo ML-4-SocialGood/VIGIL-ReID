@@ -92,9 +92,10 @@ class Skink(DatasetBase):
             image_name, _ = os.path.splitext(os.path.basename(img_path))
             comps = image_name.split("_")
             if len(comps) < 2:
-                raise ValueError(
-                    f"Filename '{image_name}' missing 'aid_camid_...' parts."
-                )
+                # raise ValueError(
+                #     f"Filename '{image_name}' missing 'aid_camid_...' parts."
+                # )
+                return comps[0], "-1"
             aid = comps[0]
             camid = comps[1]
             return aid, camid
